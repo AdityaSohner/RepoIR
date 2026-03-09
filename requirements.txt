@@ -1,0 +1,61 @@
+# Core Backend
+fastapi
+uvicorn
+pydantic
+
+# Database
+sqlalchemy
+psycopg2-binary
+
+# Object Storage (MinIO / S3 compatible)
+boto3
+
+# Document Extractors
+pdfplumber
+python-docx
+python-pptx
+openpyxl
+
+# Image Processing
+pillow
+pytesseract
+pdf2image
+
+# URL / Web Content Extraction
+requests
+beautifulsoup4
+readability-lxml
+
+# NLP / AI
+sentence-transformers
+# spacy
+# nltk
+torch
+
+# Vector Database
+faiss-cpu
+
+# Utilities
+python-multipart
+python-dotenv
+
+#gemini
+google-genai
+
+
+#google cloud services
+google-api-python-client 
+google-auth-httplib2 
+google-auth-oauthlib
+
+#crptography
+cryptography
+
+#auth
+pyjwt
+bcrypt
+google-auth
+
+#math
+numpy
+

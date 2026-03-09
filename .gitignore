@@ -1,0 +1,40 @@
+# Virtual Environments
+env/
+venv/
+.venv/
+
+# Local Data & Databases
+data/
+repoir.db
+users.db
+faiss_index.bin
+faiss_metadata.json
+
+# Private Secrets
+.env
+credentials.json
+token.json.enc
+
+# Temporary Files & Junk
+trash_temp/
+__pycache__/
+*.pyc
+*.log
+.DS_Store
+desktop.ini
+
+# Logs & Metrics
+logs/
+debug_utils/
+tests/
+legacy/
+data_backup/
+notebooks/
+scripts/
+
+# Mac/Windows System Files
+Thumbs.db
+ehthumbs.db
+[Nn]anopackage/
+[Oo]bj/
+[Bb]in/

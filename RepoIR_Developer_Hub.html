@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RepoIR | Developer Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://accounts.google.com/gsi/client" async></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card {
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            transition: all 0.2s;
+        }
+
+        .btn-primary:hover {
+            opacity: 0.9;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .search-badge {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+
+        #dropzone.dragging {
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        /* Preview Modal */
+        #previewModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        #previewModal.active {
+            display: flex;
+        }
+
+        .preview-content {
+            width: 100%;
+            max-width: 1000px;
+            height: 90vh;
+            background: #1e293b;
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .preview-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .preview-body {
+            flex: 1;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0f172a;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+
+    <!-- Auth Section (Hidden if logged in) -->
+    <div id="auth-section" class="max-w-md mx-auto mt-20">
+        <div class="glass rounded-2xl p-8 text-center">
+            <div class="flex justify-center mb-6">
+                <div class="p-3 bg-blue-600 rounded-xl">
+                    <i data-lucide="shield" class="w-8 h-8 text-white"></i>
+                </div>
+            </div>
+            <h1 class="text-3xl font-bold mb-2">RepoIR Engine</h1>
+            <p class="text-slate-400 mb-8">Privacy-First AI Search Gateway</p>
+
+            <div class="space-y-4">
+                <div id="g_id_onload"
+                    data-client_id="431198643697-t8iv17kng6cjqdm173tliajok3aukb5b.apps.googleusercontent.com"
+                    data-context="signin" data-ux_mode="popup" data-callback="handleGoogleResponse"
+                    data-auto_prompt="false">
+                </div>
+
+                <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline"
+                    data-text="signin_with" data-size="large" data-logo_alignment="left" data-width="100%">
+                </div>
+
+                <div class="relative py-4">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-slate-700"></div>
+                    </div>
+                    <div class="relative flex justify-center text-xs uppercase"><span
+                            class="bg-[#1e293b] px-2 text-slate-500">Or traditional</span></div>
+                </div>
+
+                <input type="email" id="email" placeholder="Email"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="password" placeholder="Password"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="flex gap-2">
+                    <button onclick="handleAuth('login')"
+                        class="flex-1 btn-primary py-3 rounded-lg font-semibold">Login</button>
+                    <button onclick="handleAuth('signup')"
+                        class="flex-1 bg-slate-800 hover:bg-slate-700 py-3 rounded-lg font-semibold border border-slate-700">Signup</button>
+                </div>
+
+                <!-- Testing Panel Addition -->
+                <div class="pt-6 mt-6 border-t border-slate-700 text-left">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold mb-2 tracking-widest">Advanced Server
+                        Settings</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="apiBaseOverride" placeholder="Target Server URL"
+                            class="flex-1 bg-slate-900/50 border border-slate-800 rounded px-3 py-1 text-[10px] focus:outline-none">
+                        <button onclick="setApiBase()"
+                            class="px-3 py-1 bg-slate-800 rounded text-[10px] hover:bg-slate-700">Set</button>
+                    </div>
+                    <p class="text-[9px] text-slate-600 mt-1 italic">Current: <span id="currentApiBase"
+                            class="text-blue-400"></span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Hub (Hidden by default) -->
+    <div id="hub-section" class="hidden max-w-7xl mx-auto">
+        <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+            <div>
+                <h2 class="text-3xl font-bold flex items-center gap-2">
+                    <i data-lucide="layout-dashboard" class="text-blue-500"></i>
+                    Developer Hub
+                </h2>
+                <p class="text-slate-400 mt-1" id="user-display-id">Connected to RepoIR Engine</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="connectDrive()"
+                    class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-sm flex items-center gap-2">
+                    <i data-lucide="cloud"></i> Connect Drive
+                </button>
+                <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-1 rounded-lg">
+                    <i data-lucide="shield" class="w-4 h-4 text-emerald-500" id="lockIcon"></i>
+                    <input type="password" id="vaultPassword" placeholder="Enter Secret" oninput="updateVaultStatus()"
+                        class="bg-transparent border-none focus:outline-none text-xs w-24">
+                </div>
+                <div id="vaultStatus"
+                    class="hidden text-[10px] px-2 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-400">
+                    Checking...
+                </div>
+                <button onclick="logout()"
+                    class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition">Logout</button>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Left Column: Search & Stats -->
+            <div class="lg:col-span-8 space-y-6">
+
+                <!-- Search Zone -->
+                <div class="glass rounded-2xl p-6">
+                    <div class="relative group">
+                        <i data-lucide="search"
+                            class="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500"></i>
+                        <input type="text" id="searchInput" onkeyup="if(event.key==='Enter') performSearch()"
+                            placeholder="Search anything (e.g. 'Fashion and Clothing')"
+                            class="w-full bg-slate-950/50 border border-slate-700 rounded-xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg">
+                        <div class="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+                            <span class="text-xs text-slate-500 bg-slate-800 px-2 py-1 rounded">Enter</span>
+                        </div>
+                    </div>
+
+                    <div id="searchResults" class="mt-6 space-y-3">
+                        <!-- Search items will appear here -->
+                        <div class="text-center py-10 text-slate-600 italic">
+                            Enter a query to see the Intelligent AI Filter in action...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Library -->
+                <div class="glass rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold flex items-center gap-2">
+                            <i data-lucide="library" class="w-5 h-5 text-purple-400"></i>
+                            File Library
+                        </h3>
+                        <button onclick="syncVault()"
+                            class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Sync
+                        </button>
+                    </div>
+                    <div id="fileLibrary" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-2">
+                        <!-- Managed files -->
+                        <div class="col-span-full text-center py-10 text-slate-600">
+                            Your private vault is empty.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="glass rounded-xl p-4 text-center card">
+                        <p class="text-slate-500 text-xs mb-1 uppercase font-semibold">Documents</p>
+                        <p class="text-2xl font-bold" id="stat-document">0</p>
+                    </div>
+                    <div class="glass rounded-xl p-4 text-center card">
+                        <p class="text-slate-500 text-xs mb-1 uppercase font-semibold">Images</p>
+                        <p class="text-2xl font-bold" id="stat-image">0</p>
+                    </div>
+                    <div class="glass rounded-xl p-4 text-center card">
+                        <p class="text-slate-500 text-xs mb-1 uppercase font-semibold">URLs</p>
+                        <p class="text-2xl font-bold" id="stat-url">0</p>
+                    </div>
+                    <div class="glass rounded-xl p-4 text-center card">
+                        <p class="text-slate-500 text-xs mb-1 uppercase font-semibold">Text</p>
+                        <p class="text-2xl font-bold" id="stat-text">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Upload & Activity -->
+            <div class="lg:col-span-4 space-y-6">
+
+                <!-- Upload Zone -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i data-lucide="upload-cloud" class="w-5 h-5 text-blue-400"></i>
+                        Batch Ingestion
+                    </h3>
+
+                    <div id="dropzone"
+                        class="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center cursor-pointer hover:border-blue-500/50 transition-all mb-4">
+                        <input type="file" id="fileInput" multiple class="hidden" onchange="handleFileUpload()">
+                        <i data-lucide="files" class="w-10 h-10 text-slate-600 mx-auto mb-4"></i>
+                        <p class="text-sm text-slate-400">Drop files here or <span class="text-blue-500">browse</span>
+                        </p>
+                        <p class="text-xs text-slate-600 mt-2">Multiple selection enabled</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div class="relative">
+                            <i data-lucide="link"
+                                class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"></i>
+                            <input type="text" id="urlInput" placeholder="Paste URL (e.g. blog link)"
+                                class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <button onclick="handleUrlIngest()"
+                            class="w-full bg-slate-800 hover:bg-slate-700 py-2 rounded-lg font-semibold border border-slate-700 text-sm transition">Ingest
+                            URL</button>
+                    </div>
+
+                    <div class="space-y-3 mt-4 pt-4 border-t border-slate-700">
+                        <textarea id="textInput" placeholder="Paste raw text snippet here..." rows="3"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                        <input type="text" id="textFilenameInput" placeholder="Optional filename (e.g. server_logs)"
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button onclick="handleTextIngest()"
+                            class="w-full bg-slate-800 hover:bg-slate-700 py-2 rounded-lg font-semibold border border-slate-700 text-sm transition text-blue-400">Save
+                            Raw Text</button>
+                    </div>
+
+                    <div id="uploadStatus" class="mt-4 space-y-2"></div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i data-lucide="activity" class="w-5 h-5 text-green-400"></i>
+                        Recent Activity
+                    </h3>
+                    <div id="activityLog" class="space-y-4 text-sm max-h-64 overflow-y-auto pr-2">
+                        <!-- Activity items -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- Preview Modal -->
+    <div id="previewModal">
+        <div class="preview-content">
+            <div class="preview-header">
+                <div class="flex items-center gap-3">
+                    <div id="previewIcon" class="p-2 bg-blue-500/20 rounded-lg">
+                        <i data-lucide="file-text" class="w-5 h-5 text-blue-400"></i>
+                    </div>
+                    <div>
+                        <h3 id="previewTitle" class="font-semibold text-slate-100">Document Name</h3>
+                        <p id="previewMeta" class="text-[10px] text-slate-500 uppercase tracking-widest">PDF • 2.4 MB
+                        </p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="downloadBtn"
+                        class="p-2 hover:bg-slate-700 rounded-lg text-slate-400 hover:text-white transition-colors"
+                        title="Download">
+                        <i data-lucide="download" class="w-5 h-5"></i>
+                    </button>
+                    <button onclick="closePreview()"
+                        class="p-2 hover:bg-red-500/20 rounded-lg text-slate-400 hover:text-red-400 transition-colors">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="preview-body" id="previewBody">
+                <!-- Content injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Core Configuration ---
+        function getApiBase() {
+            const stored = localStorage.getItem('repoir_api_base');
+            if (stored) return stored;
+            return window.location.origin === "null" ? "http://127.0.0.1:8000" : window.location.origin;
+        }
+
+        let API_BASE = getApiBase();
+        let TOKEN = localStorage.getItem('repoir_token');
+        let GOOGLE_CLIENT_ID = ""; // To be fetched from server
+
+        function setApiBase() {
+            const val = document.getElementById('apiBaseOverride').value;
+            if (val) {
+                localStorage.setItem('repoir_api_base', val.replace(/\/$/, ""));
+                location.reload();
+            }
+        }
+
+        // Update the display if it exists (on auth screen)
+        window.addEventListener('DOMContentLoaded', () => {
+            const display = document.getElementById('currentApiBase');
+            if (display) display.innerText = API_BASE;
+        });
+
+        // --- Auth Logic ---
+        function checkUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            if (code && TOKEN) {
+                const vaultPass = prompt("Set a Vault Secret for this Drive connection (Important for encryption):");
+                if (!vaultPass) return;
+
+                fetch(`${API_BASE}/v1/auth/gdrive/callback`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        redirect_uri: window.location.origin + "/dashboard",
+                        vault_password: vaultPass
+                    })
+                }).then(res => res.json()).then(data => {
+                    if (data.status === 'connected') {
+                        alert("Google Drive Vault connected successfully!");
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        refreshDashboard();
+                    }
+                });
+            }
+        }
+
+        async function connectDrive() {
+            if (!GOOGLE_CLIENT_ID) {
+                const cfg = await fetch(`${API_BASE}/v1/config`).then(r => r.json());
+                GOOGLE_CLIENT_ID = cfg.client_id;
+            }
+            if (!GOOGLE_CLIENT_ID) {
+                alert("Google Client ID not configured on server (.env)");
+                return;
+            }
+            const redirectURI = window.location.origin + "/dashboard";
+            const scope = "https://www.googleapis.com/auth/drive.file";
+            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectURI)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
+            window.location.href = authUrl;
+        }
+
+        async function handleGoogleResponse(response) {
+            try {
+                const res = await fetch(`${API_BASE}/v1/auth/google`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id_token: response.credential })
+                });
+                const data = await res.json();
+                if (data.token) {
+                    processAuthSuccess(data);
+                } else {
+                    alert("Google Auth Failed: " + data.detail);
+                }
+            } catch (err) {
+                alert("Server Connection Error.");
+            }
+        }
+
+        async function handleAuth(type) {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/v1/auth/${type}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+
+                if (data.token) {
+                    processAuthSuccess(data);
+                } else {
+                    alert(data.detail || "Authentication Failed");
+                }
+            } catch (err) {
+                alert("Server Connection Error. Ensure main.py is running on port 8000.");
+            }
+        }
+
+        function processAuthSuccess(data) {
+            localStorage.setItem('repoir_token', data.token);
+            localStorage.setItem('repoir_uid', data.user_id);
+            location.reload();
+        }
+
+        function logout() {
+            localStorage.removeItem('repoir_token');
+            location.reload();
+        }
+
+        // --- Dashboard Data ---
+        async function refreshDashboard() {
+            if (!TOKEN) return showAuth();
+            showHub();
+
+            try {
+                // Fetch Stats
+                const statsRes = await fetch(`${API_BASE}/v1/analytics/stats`, {
+                    headers: { 'Authorization': `Bearer ${TOKEN}` }
+                });
+                const stats = await statsRes.json();
+                document.getElementById('stat-document').innerText = stats.document?.count || 0;
+                document.getElementById('stat-image').innerText = stats.image?.count || 0;
+                document.getElementById('stat-url').innerText = stats.url?.count || 0;
+                document.getElementById('stat-text').innerText = stats.text?.count || 0;
+
+                // Fetch Activity
+                const actRes = await fetch(`${API_BASE}/v1/analytics/activity`, {
+                    headers: { 'Authorization': `Bearer ${TOKEN}` }
+                });
+                const actData = await actRes.json();
+                renderActivity(actData.activity);
+
+                // Refresh Library
+                refreshLibrary();
+            } catch (err) {
+                console.error("Dashboard refresh failed:", err);
+            }
+        }
+
+        async function refreshLibrary() {
+            try {
+                const res = await fetch(`${API_BASE}/v1/files`, {
+                    headers: { 'Authorization': `Bearer ${TOKEN}` }
+                });
+                const data = await res.json();
+                renderLibrary(data.files);
+            } catch (err) {
+                console.error("Library sync failed:", err);
+            }
+        }
+
+        async function syncVault() {
+            const vaultPass = document.getElementById('vaultPassword').value;
+            if (!vaultPass) {
+                alert("Please enter your Vault Secret to sync with GDrive.");
+                return;
+            }
+
+            const btn = event.currentTarget;
+            const originalHtml = btn ? btn.innerHTML : `<i data-lucide="refresh-cw" class="w-3 h-3"></i> Sync`;
+            if (btn) btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Syncing...`;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch(`${API_BASE}/v1/vault/sync`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: vaultPass })
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'synced') {
+                    await refreshLibrary();
+                } else {
+                    const errorMsg = data.detail || "Check your Drive connection and Secret.";
+                    alert(`Sync failed: ${errorMsg}`);
+                }
+            } catch (err) {
+                alert("Network Error: Could not reach RepoIR Engine.");
+            } finally {
+                if (btn) {
+                    btn.innerHTML = originalHtml;
+                    lucide.createIcons();
+                }
+            }
+        }
+
+        function renderLibrary(files) {
+            const container = document.getElementById('fileLibrary');
+            if (!files || !files.length) {
+                container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-600">Your private vault is empty.</div>`;
+                return;
+            }
+
+            container.innerHTML = files.map(f => `
+                <div class="glass flex items-center justify-between p-3 rounded-xl border-l-2 ${getTypeColor(f.type)} group">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <div class="w-10 h-10 rounded-lg overflow-hidden bg-slate-900 flex-shrink-0 border border-slate-700 flex items-center justify-center">
+                            ${f.thumbnail_url
+                    ? `<img src="${f.thumbnail_url.startsWith('http') ? f.thumbnail_url : API_BASE + f.thumbnail_url}" 
+                                        class="w-full h-full object-cover" alt="" 
+                                        onerror="this.style.display='none';this.parentElement.querySelector('.fallback-icon').style.display='flex'">`
+                    : ''}
+                            <div style="display:${f.thumbnail_url ? 'none' : 'flex'}" class="fallback-icon w-full h-full items-center justify-center">
+                                ${f.icon_url ? `<img src="${f.icon_url}" class="w-5 h-5" alt="">` : `<i data-lucide="${getIcon(f.type)}" class="w-5 h-5 text-slate-500"></i>`}
+                            </div>
+                        </div>
+                        <div class="overflow-hidden">
+                            <p class="text-xs font-medium text-slate-200 truncate">${f.source}</p>
+                            <p class="text-[10px] text-slate-500 uppercase tracking-tighter">${f.type} • ${formatSize(f.file_size)}</p>
+                        </div>
+                    </div>
+                    <button onclick="previewFile('${f.object_id}')" class="opacity-0 group-hover:opacity-100 p-2 hover:bg-slate-700 rounded-lg transition-all text-blue-400" title="View File">
+                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        async function previewFile(objectId) {
+            const vaultPass = document.getElementById('vaultPassword').value;
+            if (!vaultPass) {
+                alert("Please enter your Vault Secret (top right) to view this file.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/v1/files`, { headers: { 'Authorization': `Bearer ${TOKEN}` } });
+                const { files } = await res.json();
+                const file = files.find(f => f.object_id === objectId);
+                if (!file) return;
+
+                const url = `${API_BASE}/v1/files/preview?object_id=${objectId}&password=${encodeURIComponent(vaultPass)}&token=${TOKEN}`;
+
+                // Set Header info
+                document.getElementById('previewTitle').innerText = file.source;
+                document.getElementById('previewMeta').innerText = `${file.type} • ${formatSize(file.file_size)}`;
+                document.getElementById('downloadBtn').onclick = () => window.open(url, '_blank');
+
+                const body = document.getElementById('previewBody');
+                body.innerHTML = '<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>';
+                document.getElementById('previewModal').classList.add('active');
+
+                if (file.type === 'url') {
+                    window.open(file.source, '_blank');
+                    closePreview();
+                } else if (file.type === 'image') {
+                    body.innerHTML = `<img src="${url}" class="max-w-full max-h-full object-contain shadow-2xl rounded" alt="">`;
+                } else if (file.type === 'document' && file.source.toLowerCase().endsWith('.pdf')) {
+                    body.innerHTML = `<iframe src="${url}" class="w-full h-full border-none" type="application/pdf"></iframe>`;
+                } else if (file.file_path) {
+                    // Use Google Drive's native preview for Office/Other formats
+                    const drivePreviewUrl = `https://drive.google.com/file/d/${file.file_path}/preview`;
+                    body.innerHTML = `<iframe src="${drivePreviewUrl}" class="w-full h-full border-none" allow="autoplay; encrypted-media"></iframe>`;
+                } else {
+                    body.innerHTML = `<div class="text-slate-500">Preview not available for this file type locally.</div>`;
+                }
+                lucide.createIcons();
+            } catch (err) {
+                console.error(err);
+                alert("Could not load preview.");
+            }
+        }
+
+        function closePreview() {
+            document.getElementById('previewModal').classList.remove('active');
+            document.getElementById('previewBody').innerHTML = "";
+        }
+
+        function renderActivity(list) {
+            const container = document.getElementById('activityLog');
+            container.innerHTML = list.length
+                ? list.map(a => `
+                    <div class="flex gap-3 border-l-2 border-slate-800 pl-3">
+                        <div class="pt-1"><div class="w-1.5 h-1.5 rounded-full ${getActionColor(a.action)}"></div></div>
+                        <div>
+                            <p class="text-slate-200"><strong>${a.action}:</strong> ${a.details}</p>
+                            <p class="text-[10px] text-slate-500">${new Date(a.timestamp).toLocaleString()}</p>
+                        </div>
+                    </div>
+                `).join('')
+                : '<p class="text-slate-600 italic">No recent activity.</p>';
+        }
+
+        function getActionColor(action) {
+            switch (action) {
+                case 'UPLOAD': return 'bg-blue-500';
+                case 'DELETE': return 'bg-red-500';
+                case 'RENAME': return 'bg-yellow-500';
+                case 'INGEST': return 'bg-purple-500';
+                default: return 'bg-green-500';
+            }
+        }
+
+        // --- Ingestion Logic ---
+        async function handleFileUpload() {
+            const input = document.getElementById('fileInput');
+            const files = input.files;
+            if (!files.length) return;
+
+            const status = document.getElementById('uploadStatus');
+            status.innerHTML = `<div class="p-3 bg-blue-500/20 text-blue-400 rounded-lg text-sm animate-pulse">Uploading ${files.length} files...</div>`;
+
+            const vaultPass = document.getElementById('vaultPassword').value;
+            const endpoint = vaultPass ? `${API_BASE}/v1/ingest/cloud` : `${API_BASE}/v1/ingest/local`;
+
+            const formData = new FormData();
+            for (let f of files) {
+                formData.append('files', f);
+            }
+            if (vaultPass) {
+                formData.append('password', vaultPass);
+            }
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${TOKEN}` },
+                    body: formData
+                });
+                const data = await res.json();
+                status.innerHTML = `<div class="p-3 bg-green-500/20 text-green-400 rounded-lg text-sm">Batch accepted! Processing in background.</div>`;
+                setTimeout(() => {
+                    status.innerHTML = "";
+                    refreshDashboard();
+                }, 3000);
+            } catch (err) {
+                status.innerHTML = `<div class="p-3 bg-red-500/20 text-red-400 rounded-lg text-sm">Upload failed.</div>`;
+            }
+        }
+
+        async function handleUrlIngest() {
+            const urlInput = document.getElementById('urlInput');
+            const url = urlInput.value;
+            if (!url) return;
+
+            const status = document.getElementById('uploadStatus');
+            status.innerHTML = `<div class="p-3 bg-purple-500/20 text-purple-400 rounded-lg text-sm animate-pulse">Ingesting URL...</div>`;
+
+            const formData = new FormData();
+            formData.append('url', url);
+
+            try {
+                const res = await fetch(`${API_BASE}/v1/ingest/url`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${TOKEN}` },
+                    body: formData
+                });
+                const data = await res.json();
+                urlInput.value = "";
+                status.innerHTML = `<div class="p-3 bg-green-500/20 text-green-400 rounded-lg text-sm">URL accepted! Processing...</div>`;
+                setTimeout(() => {
+                    status.innerHTML = "";
+                    refreshDashboard();
+                }, 3000);
+            } catch (err) {
+                status.innerHTML = `<div class="p-3 bg-red-500/20 text-red-400 rounded-lg text-sm">URL ingestion failed.</div>`;
+            }
+        }
+
+        async function handleTextIngest() {
+            const textInput = document.getElementById('textInput');
+            const fnameInput = document.getElementById('textFilenameInput');
+            const text = textInput.value;
+            let filename = fnameInput.value;
+            if (!text) return;
+            if (!filename) filename = "Pasted_Snippet";
+
+            const status = document.getElementById('uploadStatus');
+            status.innerHTML = `<div class="p-3 bg-blue-500/20 text-blue-400 rounded-lg text-sm animate-pulse">Ingesting text snippet...</div>`;
+
+            const vaultPass = document.getElementById('vaultPassword').value;
+
+            const formData = new FormData();
+            formData.append('text', text);
+            formData.append('filename', filename + ".txt"); // Ensure extension
+            if (vaultPass) {
+                formData.append('password', vaultPass);
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/v1/ingest/text`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${TOKEN}` },
+                    body: formData
+                });
+                const data = await res.json();
+                textInput.value = "";
+                fnameInput.value = "";
+                status.innerHTML = `<div class="p-3 bg-green-500/20 text-green-400 rounded-lg text-sm">Text accepted! Processing snippet.</div>`;
+                setTimeout(() => {
+                    status.innerHTML = "";
+                    refreshDashboard();
+                }, 3000);
+            } catch (err) {
+                status.innerHTML = `<div class="p-3 bg-red-500/20 text-red-400 rounded-lg text-sm">Text ingestion failed.</div>`;
+            }
+        }
+
+        // --- Intelligent Search ---
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value;
+            if (!query) return;
+
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.innerHTML = `<div class="text-center py-10"><i data-lucide="loader-2" class="w-8 h-8 text-blue-500 animate-spin mx-auto mr-2"></i><p class="mt-2 text-slate-500">AI re-ranking in progress...</p></div>`;
+            lucide.createIcons();
+
+            try {
+                const res = await fetch(`${API_BASE}/v1/search`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query, limit: 10 })
+                });
+                const data = await res.json();
+                renderSearch(data.results);
+            } catch (err) {
+                resultsContainer.innerHTML = `<div class="text-red-400 text-center py-10">Search Error</div>`;
+            }
+        }
+
+        function renderSearch(results) {
+            const container = document.getElementById('searchResults');
+            if (!results.length) {
+                container.innerHTML = `<div class="text-center py-10 text-slate-500">No strictly matching files found. AI filter active.</div>`;
+                return;
+            }
+
+            container.innerHTML = results.map(r => `
+                <div class="glass flex items-center justify-between p-4 rounded-xl hover:bg-slate-800/50 transition border-l-4 ${getTypeColor(r.type)}">
+                    <div class="flex items-center gap-4">
+                        <div class="p-2 bg-slate-900 rounded-lg">
+                            <i data-lucide="${getIcon(r.type)}" class="w-5 h-5 text-slate-400"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium text-slate-100">${r.source}</h4>
+                            <div class="flex gap-2 items-center mt-1">
+                                <span class="text-[10px] uppercase font-bold tracking-wider opacity-50 px-1 border border-white/20 rounded">${r.type}</span>
+                                <span class="text-[10px] text-slate-500">${formatSize(r.file_size)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function getIcon(type) {
+            if (type === 'document') return 'file-text';
+            if (type === 'image') return 'image';
+            if (type === 'url') return 'link';
+            return 'file';
+        }
+
+        function getTypeColor(type) {
+            if (type === 'document') return 'border-blue-500';
+            if (type === 'image') return 'border-pink-500';
+            if (type === 'url') return 'border-emerald-500';
+            return 'border-slate-500';
+        }
+
+        function formatSize(bytes) {
+            if (!bytes) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+
+        // --- UI State ---
+        function showAuth() {
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('hub-section').classList.add('hidden');
+        }
+        function showHub() {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('hub-section').classList.remove('hidden');
+            document.getElementById('user-display-id').innerText = `Connected as User ID: ${localStorage.getItem('repoir_uid')}`;
+        }
+
+        async function updateVaultStatus() {
+            const vaultPass = document.getElementById('vaultPassword').value;
+            const vaultStatus = document.getElementById('vaultStatus');
+            const lockIcon = document.getElementById('lockIcon');
+
+            vaultStatus.classList.remove('hidden');
+            vaultStatus.className = 'text-[10px] px-2 py-1 rounded-md bg-slate-800 border text-slate-400';
+            lockIcon.className = 'w-4 h-4 text-slate-500'; // Reset icon color
+            vaultStatus.innerText = 'Checking...';
+
+            if (!vaultPass) {
+                vaultStatus.innerText = 'No Secret';
+                vaultStatus.classList.add('border-slate-700');
+                sessionStorage.removeItem('repoir_vault_pass');
+                return;
+            }
+
+            sessionStorage.setItem('repoir_vault_pass', vaultPass);
+
+            try {
+                const res = await fetch(`${API_BASE}/v1/vault/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ password: vaultPass })
+                });
+                const data = await res.json();
+
+                if (data.status === 'valid') {
+                    vaultStatus.innerText = 'Vault Ready';
+                    vaultStatus.className = 'text-[10px] px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-500';
+                    lockIcon.className = 'w-4 h-4 text-emerald-500';
+                } else if (data.status === 'not_connected') {
+                    vaultStatus.innerText = 'Drive Not Connected';
+                    vaultStatus.className = 'text-[10px] px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-500';
+                    lockIcon.className = 'w-4 h-4 text-amber-500';
+                } else if (data.status === 'locked') {
+                    vaultStatus.innerText = 'Vault Locked';
+                    vaultStatus.className = 'text-[10px] px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-500';
+                    lockIcon.className = 'w-4 h-4 text-blue-500';
+                } else {
+                    vaultStatus.innerText = 'Invalid Secret';
+                    vaultStatus.className = 'text-[10px] px-2 py-1 rounded-md bg-red-500/10 border border-red-500/20 text-red-400';
+                    lockIcon.className = 'w-4 h-4 text-red-500';
+                }
+            } catch (err) {
+                console.error("Vault status check failed:", err);
+                vaultStatus.innerText = 'Error';
+                vaultStatus.classList.add('border-red-500', 'text-red-400');
+                lockIcon.className = 'w-4 h-4 text-red-500';
+            }
+        }
+
+        // Drag & Drop
+        const dropzone = document.getElementById('dropzone');
+        dropzone.addEventListener('click', () => document.getElementById('fileInput').click());
+        dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragging'); });
+        dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragging'));
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragging');
+            document.getElementById('fileInput').files = e.dataTransfer.files;
+            handleFileUpload();
+        });
+
+        // Initialize
+        lucide.createIcons();
+        checkUrlParams();
+        const savedPass = sessionStorage.getItem('repoir_vault_pass');
+        if (savedPass) {
+            document.getElementById('vaultPassword').value = savedPass;
+        }
+        if (TOKEN) {
+            refreshDashboard();
+            setTimeout(updateVaultStatus, 500);
+        } else {
+            showAuth();
+        }
+    </script>
+</body>
+
+</html>
+活跃
