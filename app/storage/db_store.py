@@ -18,8 +18,8 @@ class DBStore:
         self.user_dir.mkdir(parents=True, exist_ok=True)
         self.db_path = self.user_dir / "repoir.db"
         
-        # Increased timeout to 20s to prevent locking timeouts during heavy syncs
-        self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False, timeout=20.0)
+        # Increased timeout and set isolation_level=None (autocommit) to prevent locking
+        self.conn = sqlite3.connect(str(self.db_path), check_same_thread=False, timeout=30.0, isolation_level=None)
         self.conn.row_factory = sqlite3.Row
         
         # High concurrency settings (WAL mode allows readers to read while writers write)
