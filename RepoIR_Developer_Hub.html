@@ -390,7 +390,7 @@
                     },
                     body: JSON.stringify({
                         code: code,
-                        redirect_uri: window.location.origin + "/dashboard",
+                        redirect_uri: window.location.href.split('?')[0],
                         vault_password: vaultPass
                     })
                 }).then(res => res.json()).then(data => {
@@ -412,7 +412,7 @@
                 alert("Google Client ID not configured on server (.env)");
                 return;
             }
-            const redirectURI = window.location.origin + "/dashboard";
+            const redirectURI = window.location.href.split('?')[0];
             const scope = "https://www.googleapis.com/auth/drive.file";
             const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectURI)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
             window.location.href = authUrl;
