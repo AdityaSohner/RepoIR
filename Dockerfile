@@ -37,7 +37,7 @@ ENV HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH
 
 # Expose the port the app runs on
-EXPOSE 8000
+EXPOSE 7860
 
 # Command to run the application
 CMD ["python", "main.py"]
