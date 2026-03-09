@@ -39,7 +39,8 @@ faiss-cpu
 python-multipart
 python-dotenv
 
-#gemini
+# AI Connectivity
+openai
 google-genai
 
 
