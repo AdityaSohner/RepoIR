@@ -28,6 +28,11 @@ import numpy as np
 security = HTTPBearer(auto_error=False)
 app = FastAPI(title="RepoIR: Privacy-First AI Search Gateway")
 
+# Early initialization to stabilize memory and avoid lazy-load crashes
+print("⏳ Pre-warming AI components...")
+_initial_embedder = TextEmbedder()
+print("✅ Core AI Ready.")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
