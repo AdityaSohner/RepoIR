@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     libtesseract-dev \
     libgl1 \
     libglib2.0-0 \
+    poppler-utils \
     build-essential \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
