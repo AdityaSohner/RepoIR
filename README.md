@@ -104,6 +104,106 @@ docker run --rm -p 7860:7860 --env-file .env repoir-backend
 
 Refer to backend route handlers in `app_server.py` for endpoint details.
 
+## API Endpoints
+
+Base URL (local): `http://localhost:8000`
+
+Authentication routes:
+
+- `POST /v1/auth/signup`
+- `POST /v1/auth/login`
+- `POST /v1/auth/google`
+- `POST /v1/auth/gdrive/callback`
+
+Search and ingestion routes:
+
+- `POST /v1/search`
+- `POST /v1/ingest/local`
+- `POST /v1/ingest/cloud`
+- `POST /v1/ingest/url`
+- `POST /v1/ingest/text`
+- `GET /v1/status/{job_id}`
+
+Files and analytics routes:
+
+- `GET /v1/files`
+- `PATCH /v1/files/{object_id}`
+- `DELETE /v1/files/{object_id}`
+- `GET /v1/files/preview?object_id=...&password=...`
+- `GET /v1/analytics/stats`
+- `GET /v1/analytics/activity`
+
+Vault and config routes:
+
+- `GET /v1/config`
+- `POST /v1/vault/status`
+- `POST /v1/vault/sync`
+- `GET /v1/vault/thumbnail/{thumb_id}`
+
+Service routes:
+
+- `GET /`
+- `GET /hub`
+- `GET /dashboard`
+
+Sample requests:
+
+```bash
+# 1) Signup
+curl -X POST "http://localhost:8000/v1/auth/signup" \
+	-H "Content-Type: application/json" \
+	-d '{"email":"you@example.com","password":"strong-password"}'
+```
+
+```bash
+# 2) Login
+curl -X POST "http://localhost:8000/v1/auth/login" \
+	-H "Content-Type: application/json" \
+	-d '{"email":"you@example.com","password":"strong-password"}'
+```
+
+```bash
+# 3) Semantic search (replace TOKEN)
+curl -X POST "http://localhost:8000/v1/search" \
+	-H "Authorization: Bearer TOKEN" \
+	-H "Content-Type: application/json" \
+	-d '{"query":"find my OCR receipts","limit":5}'
+```
+
+```bash
+# 4) Ingest local file(s)
+curl -X POST "http://localhost:8000/v1/ingest/local" \
+	-H "Authorization: Bearer TOKEN" \
+	-F "files=@./sample.pdf"
+```
+
+```bash
+# 5) Ingest URL
+curl -X POST "http://localhost:8000/v1/ingest/url" \
+	-H "Authorization: Bearer TOKEN" \
+	-F "url=https://example.com"
+```
+
+```bash
+# 6) Ingest pasted text
+curl -X POST "http://localhost:8000/v1/ingest/text" \
+	-H "Authorization: Bearer TOKEN" \
+	-F "text=This is a note to index" \
+	-F "filename=note.txt"
+```
+
+```bash
+# 7) Track job status
+curl -X GET "http://localhost:8000/v1/status/JOB_ID" \
+	-H "Authorization: Bearer TOKEN"
+```
+
+```bash
+# 8) List indexed files
+curl -X GET "http://localhost:8000/v1/files" \
+	-H "Authorization: Bearer TOKEN"
+```
+
 ## Security Notes
 
 - Keep OAuth and API keys only in environment variables.
