@@ -1,0 +1,49 @@
+# Virtual Environments
+env/
+venv/
+.venv/
+
+# Local Data & Databases
+data/
+repoir.db
+users.db
+faiss_index.bin
+faiss_metadata.json
+
+# Private Secrets
+.env
+.env.*
+credentials.json
+token.json.enc
+token.json
+*.pem
+*.key
+
+# Local runtime artifacts
+*.db
+*.sqlite
+*.sqlite3
+
+# Temporary Files & Junk
+trash_temp/
+__pycache__/
+*.pyc
+*.log
+.DS_Store
+desktop.ini
+
+# Logs & Metrics
+logs/
+debug_utils/
+tests/
+legacy/
+data_backup/
+notebooks/
+scripts/
+
+# Mac/Windows System Files
+Thumbs.db
+ehthumbs.db
+[Nn]anopackage/
+[Oo]bj/
+[Bb]in/
