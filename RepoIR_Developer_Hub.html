@@ -186,6 +186,10 @@
                     class="hidden text-[10px] px-2 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-400">
                     Checking...
                 </div>
+                <button onclick="purgeData()"
+                    class="px-4 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded-lg border border-red-900/30 transition text-sm flex items-center gap-2" title="Delete all indexed data and logout">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i> Purge Data
+                </button>
                 <button onclick="logout()"
                     class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 transition">Logout</button>
             </div>
@@ -467,6 +471,28 @@
         function logout() {
             localStorage.removeItem('repoir_token');
             location.reload();
+        }
+
+        async function purgeData() {
+            if (!confirm("CRITICAL ACTION: This will permanently delete all your indexed files, search history, and vector embeddings from the server. You will be logged out. Continue?")) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/v1/user/reset`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${TOKEN}` }
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert("All data purged successfully.");
+                    logout();
+                } else {
+                    alert("Error: " + data.detail);
+                }
+            } catch (err) {
+                alert("Failed to reach server.");
+            }
         }
 
         // --- Dashboard Data ---
@@ -913,19 +939,49 @@
             handleFileUpload();
         });
 
-        // Initialize
-        lucide.createIcons();
-        checkUrlParams();
-        const savedPass = sessionStorage.getItem('repoir_vault_pass');
-        if (savedPass) {
-            document.getElementById('vaultPassword').value = savedPass;
+        async function init() {
+            lucide.createIcons();
+            
+            // 1. Fetch Config from server (gets Client ID)
+            try {
+                const cfg = await fetch(`${API_BASE}/v1/config`).then(r => r.json());
+                GOOGLE_CLIENT_ID = cfg.client_id;
+                
+                if (GOOGLE_CLIENT_ID) {
+                    const gOnload = document.getElementById('g_id_onload');
+                    if (gOnload) {
+                        gOnload.setAttribute('data-client_id', GOOGLE_CLIENT_ID);
+                        // Re-initialize Google Sign-In if it missed the first pass
+                        if (window.google && google.accounts && google.accounts.id) {
+                            google.accounts.id.initialize({
+                                client_id: GOOGLE_CLIENT_ID,
+                                callback: handleGoogleResponse
+                            });
+                            google.accounts.id.renderButton(
+                                document.querySelector(".g_id_signin"),
+                                { theme: "outline", size: "large", width: "100%" }
+                            );
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to fetch server config:", err);
+            }
+
+            checkUrlParams();
+            const savedPass = sessionStorage.getItem('repoir_vault_pass');
+            if (savedPass) {
+                document.getElementById('vaultPassword').value = savedPass;
+            }
+            if (TOKEN) {
+                refreshDashboard();
+                setTimeout(updateVaultStatus, 500);
+            } else {
+                showAuth();
+            }
         }
-        if (TOKEN) {
-            refreshDashboard();
-            setTimeout(updateVaultStatus, 500);
-        } else {
-            showAuth();
-        }
+
+        init();
     </script>
 </body>
 

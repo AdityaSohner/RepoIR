@@ -555,6 +555,13 @@ async def preview_file(object_id: str, password: str, user_id: str = Depends(get
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Previewing Error: {str(e)}")
 
+@app.delete("/v1/user/reset")
+def reset_user_data(user_id: str = Depends(get_current_user)):
+    """Wipes all indexed content and search history for the user."""
+    db = DBStore(user_id=user_id)
+    db.purge_user_data()
+    return {"status": "success", "message": "All user search data has been purged."}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -17,6 +17,10 @@ import io
 import base64
 from PIL import Image
 import numpy as np
+import threading
+
+# Global lock to prevent parallel ingestion race conditions
+_ingestion_lock = threading.Lock()
 
 class IngestionPipeline:
     def __init__(self, user_id: str = "default"):
@@ -109,9 +113,11 @@ class IngestionPipeline:
             file_size, thumbnail_url=None
         )
         self.db.store_chunks(object_id, chunks)
-        start_id = self.db.get_next_vector_id()
-        self.faiss.add(embeddings)
-        self.db.store_vectors(start_id, chunk_ids)
+        with _ingestion_lock:
+            start_id = self.db.get_next_vector_id()
+            vector_ids = np.arange(start_id, start_id + len(embeddings)).astype("int64")
+            self.faiss.add(embeddings, ids=vector_ids)
+            self.db.store_vectors(start_id, chunk_ids)
         
         # Log Activity
         self.db.log_activity(user_id, "UPLOAD", f"Uploaded {original_name or source_type}")

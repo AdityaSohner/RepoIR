@@ -19,16 +19,27 @@ class FAISSStore:
 
     def _load(self):
         if self.index_path.exists():
-            return faiss.read_index(str(self.index_path))
-        return faiss.IndexFlatL2(DIM)
+            index = faiss.read_index(str(self.index_path))
+            # Wrap in IndexIDMap if it isn't already (for compatibility with old indices)
+            if not isinstance(index, faiss.IndexIDMap) and not isinstance(index, faiss.IndexIDMap2):
+                index = faiss.IndexIDMap(index)
+            return index
+        return faiss.IndexIDMap(faiss.IndexFlatL2(DIM))
 
     def _persist(self):
         self.user_dir.mkdir(parents=True, exist_ok=True)
         faiss.write_index(self.index, str(self.index_path))
 
-    def add(self, embeddings: np.ndarray):
-        """Add a batch of embedding vectors. Persists immediately."""
-        self.index.add(embeddings.astype("float32"))
+    def add(self, embeddings: np.ndarray, ids: np.ndarray = None):
+        """Add a batch of embedding vectors with explicit IDs. Persists immediately."""
+        embeddings_32 = embeddings.astype("float32")
+        if ids is not None:
+            self.index.add_with_ids(embeddings_32, ids.astype("int64"))
+        else:
+            # Fallback if no IDs provided, though we should always provide them now
+            start_id = self.index.ntotal
+            ids_generated = np.arange(start_id, start_id + len(embeddings)).astype("int64")
+            self.index.add_with_ids(embeddings_32, ids_generated)
         self._persist()
 
     def search(self, query: np.ndarray, k: int) -> list[int]:

@@ -174,11 +174,17 @@ class DBStore:
 
     def get_next_vector_id(self) -> int:
         """Returns the next available FAISS vector integer ID."""
-        # Use FAISS to get the actual running total of vectors.
-        # This prevents ID collisions if database rows are deleted.
+        # Check FAISS index count
         from app.storage.faiss_store import FAISSStore
         fs = FAISSStore(user_id=self.user_dir.name)
-        return fs.total_vectors()
+        faiss_count = fs.total_vectors()
+        
+        # Check SQLite vectors table max ID
+        row = self.conn.execute("SELECT MAX(vector_id) as max_id FROM vectors").fetchone()
+        db_max = (row["max_id"] + 1) if row and row["max_id"] is not None else 0
+        
+        # Take the maximum to ensure no collisions in either store
+        return max(faiss_count, db_max)
 
     def store_vectors(self, start_id: int, chunk_ids: list[str]):
         """Map sequential FAISS vector IDs to chunk_ids."""
@@ -316,4 +322,30 @@ class DBStore:
                 "total_size_bytes": r["size"] or 0
             }
         return stats
+    def purge_user_data(self):
+        """Wipes all search data, vectors, and logs for this user."""
+        # Get all local file paths before deleting records
+        rows = self.conn.execute("SELECT file_path FROM objects WHERE file_path IS NOT NULL").fetchall()
+        for row in rows:
+            path_str = row["file_path"]
+            if path_str and not path_str.startswith("http") and len(path_str) > 5: # Primitive check for local path
+                try:
+                    p = Path(path_str)
+                    if p.exists() and p.is_file():
+                        p.unlink()
+                except Exception:
+                    pass
 
+        self.conn.execute("DELETE FROM objects")
+        self.conn.execute("DELETE FROM chunks")
+        self.conn.execute("DELETE FROM vectors")
+        self.conn.execute("DELETE FROM activity_log")
+        self.conn.execute("DELETE FROM jobs")
+        self.conn.execute("DELETE FROM category_mappings")
+        self.conn.commit()
+        
+        # Also wipe FAISS index from disk
+        from app.storage.faiss_store import FAISSStore
+        fs = FAISSStore(user_id=self.user_dir.name)
+        if fs.index_path.exists():
+            fs.index_path.unlink()
