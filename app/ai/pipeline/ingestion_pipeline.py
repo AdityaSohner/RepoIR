@@ -56,7 +56,10 @@ class IngestionPipeline:
             semantic_text = normalize_excel(raw_text)
         elif file_type == "url":
             title = extraction_result["metadata"].get("title", "Webpage")
-            semantic_text = f"TITLE: {title}\n\nCONTENT: {raw_text}"
+            if not raw_text.strip():
+                semantic_text = ""
+            else:
+                semantic_text = f"TITLE: {title}\n\nCONTENT: {raw_text}"
         else:
             semantic_text = raw_text
 

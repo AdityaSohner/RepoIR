@@ -13,9 +13,13 @@ class LinkExtractor:
             # Prefix the URL with r.jina.ai/
             jina_url = f"https://r.jina.ai/{url}"
             
+            import random
             headers = {
                 "Accept": "application/json",
-                "Authorization": f"Bearer {JINA_API_KEY}"
+                "Authorization": f"Bearer {JINA_API_KEY}",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                "X-Forwarded-For": f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}",
+                "Accept-Language": "en-US,en;q=0.9"
             }
             
             response = requests.get(jina_url, headers=headers, timeout=15)
