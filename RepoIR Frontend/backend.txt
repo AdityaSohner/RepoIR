@@ -1,0 +1,294 @@
+# RepoIR Developer Hub: API & Frontend Workflow Documentation
+
+This document describes the API endpoints provided by the RepoIR FastAPI gateway, detailing their expected input and output formats. It also outlines the designated workflow for how a robust frontend should interact with these endpoints, specifically regarding file upload, search, and native file rendering.
+
+---
+
+## 1. Authentication Endpoints
+
+The system uses standard JWT Bearer tokens for API authorization.
+
+### 1.1 `POST /v1/auth/signup`
+Creates a new user account.
+- **Input (JSON):**
+  ```json
+  {
+      "email": "user@example.com",
+      "password": "securepassword123"
+  }
+  ```
+- **Output (JSON):**
+  ```json
+  {
+      "status": "success",
+      "user_id": "10404...",
+      "token": "eyJhbGciOiJIUzI1NiIsInR..."
+  }
+  ```
+
+### 1.2 `POST /v1/auth/login`
+Authenticates an existing user and returns a token.
+- **Input (JSON):**
+  ```json
+  {
+      "email": "user@example.com",
+      "password": "securepassword123"
+  }
+  ```
+- **Output (JSON):**
+  ```json
+  {
+      "status": "success",
+      "user_id": "10404...",
+      "token": "eyJhbGciOiJIUzI1NiIsInR..."
+  }
+  ```
+
+### 1.3 `POST /v1/auth/google`
+Authenticates a user using a Google OAuth ID token.
+- **Input (JSON):**
+  ```json
+  {
+      "id_token": "eyJhbGciOiJSUzI1NiIs..."
+  }
+  ```
+- **Output (JSON):**
+  ```json
+  {
+      "status": "success",
+      "user_id": "10404...",
+      "token": "eyJhbGciOiJIUzI1NiIsInR..."
+  }
+  ```
+
+---
+
+## 2. Google Drive Vault Connectivity
+
+These endpoints manage the connection and validation of the user's Google Drive storage layer. A `vault_password` is required to securely encrypt/decrypt their Google Drive authorization token locally.
+
+### 2.1 `POST /v1/auth/gdrive/callback`
+Completes the OAuth flow to link a user's Google Drive.
+- **Input (JSON):**
+  ```json
+  {
+      "code": "4/0AeaY...", // Google OAuth callback code
+      "redirect_uri": "http://localhost:8000/dashboard",
+      "vault_password": "my_strong_secret"
+  }
+  ```
+- **Output (JSON):**
+  ```json
+  {
+      "status": "connected"
+  }
+  ```
+
+### 2.2 `POST /v1/vault/status`
+Checks if the Drive connection is active and if the provided Vault Secret is correct.
+- **Input (JSON):**
+  ```json
+  {
+      "password": "my_strong_secret"
+  }
+  ```
+- **Output (JSON):**
+  ```json
+  {
+      "status": "valid" // Can also be: "not_connected", "locked", "invalid"
+  }
+  ```
+
+### 2.3 `POST /v1/vault/sync`
+Synchronizes the local RepoIR database with files already existing inside the user's `RepoIR_Vault` folder on Google Drive.
+- **Input (JSON):**
+  ```json
+  {
+      "password": "my_strong_secret"
+  }
+  ```
+- **Output (JSON):**
+  ```json
+  {
+      "status": "synced",
+      "new_files": 3 // Number of new files discovered and registered
+  }
+  ```
+
+---
+
+## 3. Ingestion (Upload) Endpoints
+
+These endpoints process files asynchronously.
+
+### 3.1 `POST /v1/ingest/cloud`
+Uploads files directly to Google Drive while locally processing them through the AI ingestion pipeline (OCR/Vision parsing, chunking, and embedding).
+- **Input (Multipart/Form-Data):**
+  - Make sure to append each file to [files](file:///c:/Users/adity/Desktop/RepoIR/app_server.py#436-440) (array of `UploadFile`).
+  - [password](file:///c:/Users/adity/Desktop/RepoIR/app/auth/manager.py#36-39): String. The user's Vault Secret.
+- **Output (JSON):**
+  ```json
+  {
+      "status": "accepted",
+      "job_ids": [
+          "550e8400-e29b-41d4-a716-446655440000"
+      ]
+  }
+  ```
+
+### 3.2 `GET /v1/status/{job_id}`
+Checks the progress of an asynchronous upload/ingestion job.
+- **Output (JSON):**
+  ```json
+  {
+      "job_id": "550e8400-e29b...",
+      "status": "completed", // e.g. "pending", "scanning", "uploading", "completed", "failed"
+      "error": null
+  }
+  ```
+
+### 3.3 `POST /v1/ingest/url` (Web Scraper)
+Scrapes a publicly accessible URL, extracts its main content, and processes it into vector chunks.
+- **Input (Multipart/Form-Data):**
+  - **url**: String. (e.g., `https://example.com/blog`)
+- **Output (JSON):**
+  - Returns a single `job_id` for tracking.
+
+### 3.4 `POST /v1/ingest/text` (Pasted Snippets)
+Directly ingests raw pasted text snippets.
+- **Input (Multipart/Form-Data):**
+  - **text**: String. The raw content to save.
+  - **filename**: Optional string (defaults to `Pasted_Snippet.txt`).
+  - **password**: Optional string (Vault Secret). If provided, the text is also saved as a file to Google Drive.
+- **Output (JSON):**
+  - Returns a single `job_id`.
+
+---
+
+## 4. File Library & Search
+
+### 4.1 `GET /v1/files`
+Retrieves a list of all files managed by the engine.
+- **Output (JSON):**
+  ```json
+  {
+      "files": [
+          {
+              "object_id": "cloud_a1b2c3d4",
+              "user_id": "10404...",
+              "source": "Financial_Report_Q3.pdf",
+              "type": "document",
+              "file_type": ".pdf",
+              "file_path": "1UOQJh...", // Google Drive File ID
+              "chunk_count": 24,
+              "file_size": 240500,
+              "thumbnail_url": "https://lh3.googleusercontent.com/d/...",
+              "icon_url": "https://drive-thirdparty.googleusercontent.com/16/..."
+          }
+      ]
+  }
+  ```
+
+### 4.2 `POST /v1/search`
+The core RRF AI search gateway. It mathematically combines BM25 keyword search with FAISS semantic meaning retrieval.
+- **Input (JSON):**
+  ```json
+  {
+      "query": "financial projections for next year",
+      "limit": 10 // Optional, default is 10
+  }
+  ```
+- **Output (JSON):**
+  ```json
+  {
+      "results": [
+          {
+              "object_id": "cloud_a1b2c3d4",
+              "user_id": "10404...",
+              "source": "Financial_Report_Q3.pdf",
+              "type": "document",
+              "file_type": ".pdf",
+              "file_path": "1UOQJh...",
+              ...
+          }
+      ]
+  }
+  ```
+
+---
+
+## 5. Analytics & Metrics
+
+### 5.1 `GET /v1/analytics/stats`
+Retrieves aggregation statistics of the user's data.
+- **Output (JSON):**
+  ```json
+  {
+      "document": { "count": 12, "total_size_bytes": 1400200 },
+      "image": { "count": 45, "total_size_bytes": 89000000 },
+      "text": { "count": 3, "total_size_bytes": 4500 }
+  }
+  ```
+
+### 5.2 `GET /v1/analytics/activity`
+Retrieves the real-time activity stream for the user.
+- **Output (JSON):**
+  ```json
+  {
+      "activity": [
+          {
+              "log_id": 42,
+              "user_id": "104...",
+              "action": "UPLOAD",
+              "details": "Uploaded Financial_Report_Q3.pdf",
+              "timestamp": "2026-03-09 10:15:30"
+          }
+      ]
+  }
+  ```
+
+---
+
+## 6. Real-Time Frontend Implementation Workflow
+
+When building a frontend meant to interact natively with these endpoints, the visual rendering logic *must* adapt dynamically based on the returned metadata.
+
+### 6.1 Uploading Files (The Workflow)
+1. **Frontend Request**: The user drag-and-drops files. The frontend submits a `multipart/form-data` request to `POST /v1/ingest/cloud` alongside their [password](file:///c:/Users/adity/Desktop/RepoIR/app/auth/manager.py#36-39) (Vault Secret).
+2. **Immediate Feedback**: The endpoint returns `"status": "accepted"` with an array of `job_ids`. The UI must immediately reflect an "Uploading" state.
+3. **Polling for Status**: The frontend should set an interval (e.g., every 800ms) calling `GET /v1/status/{job_id}` to update the UI progress bar (Pending -> Scanning -> Uploading -> Completed).
+4. **Completion Action**: Once the status hits `completed`, the frontend calls `GET /v1/files` and `GET /v1/analytics/stats` to silently refresh the dashboard library natively.
+
+### 6.2 The Unified Search Experience
+1. **Listening**: The frontend attaches a listener to the search bar.
+2. **Execution**: Upon pressing Enter, it calls `POST /v1/search` with the query string.
+3. **Rendering Segregation**: The `results` array returns full file metadata. The frontend must loop through these results and segregate the UI representation based on the native `type`:
+   - `if result.type === 'image'`: Render a photo gallery-style card using the `thumbnail_url` directly as an `<img src="...">`.
+   - `if result.type === 'document'`: Render a generic, polished file icon (optionally using `icon_url`), focusing visually on the filename (`source`) and `file_size`.
+   - `if result.type === 'text'`: Render a minimal code/text card.
+
+### 6.3 Secure In-App Document Rendering (Seamless Preview)
+When a user clicks on a file to preview it, the frontend should attempt to keep them locked within the application natively, avoiding clumsy browser downloads. 
+
+The frontend uses the core URL architecture: 
+`API_BASE/v1/files/preview?object_id={object_id}&password={vault_secret}&token={JWT}`
+
+The segregation logic requires the frontend to branch the rendering strategy based on browser capability:
+1. **Images (`file_type ∈ ['.jpg', '.png']`)**:
+   - Safely inject an image tag into the modal.
+   - `<img src="{API URL}" class="contain">`
+2. **PDF Documents (`file_type == '.pdf'`)**:
+   - Modern browsers support native PDF rendering. Load the API URL into an invisible `<iframe>`.
+   - `<iframe src="{API URL}" type="application/pdf"></iframe>`
+3. **Complex Office Formats (`file_type ∈ ['.docx', '.pptx', '.xlsx']`)**:
+   - Chrome/Safari/Edge cannot natively parse Excel spreadsheets or PowerPoints. Passing the raw file API URL will force a download. 
+   - Instead, the backend exposes the Google Drive `file_path`. The frontend MUST hijack the render stream and dynamically invoke Google Drive's native professional preview engine:
+   - `<iframe src="https://drive.google.com/file/d/{file.file_path}/preview" allow="autoplay; encrypted-media"></iframe>`
+
+### 6.4 Vault Connectivity State
+The frontend must securely manage the Vault Secret:
+- Store it using transient memory (e.g., JS variable or `sessionStorage`). **Do not write it directly to the Database or `localStorage` persistently.**
+- Actively poll `POST /v1/vault/status` immediately after login to alter the UI State from "Drive Disconnected!" to "Vault Connected & Ready".
+
+### 6.5 Categorization Note (Retired)
+Automatic AI-driven categorization (Virtual Folders) has been removed from the real-time ingestion pipeline to prioritize ingestion speed and reduce metadata noise. The `categories` and `category_mappings` tables remain in the schema for manual organization or future expansion, but do not require frontend implementation during this phase.

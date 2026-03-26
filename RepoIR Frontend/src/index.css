@@ -1,0 +1,215 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 187 82% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 20% 93%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 20% 93%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 187 82% 42%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 63% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 20% 88%;
+    --input: 214 20% 88%;
+    --ring: 187 82% 42%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 220 20% 97%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 187 82% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 93%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 20% 88%;
+    --sidebar-ring: 187 82% 42%;
+
+    --surface: 210 20% 96%;
+    --surface-elevated: 0 0% 100%;
+
+    --chart-1: 187 82% 42%;
+    --chart-2: 162 17% 55%;
+    --chart-3: 70 19% 60%;
+    --chart-4: 304 27% 55%;
+    --chart-5: 16 25% 55%;
+
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.1);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.1);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.15), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.15), 0 1px 2px -1px hsl(0 0% 0% / 0.15);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.2), 0 2px 4px -2px hsl(0 0% 0% / 0.15);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.25), 0 4px 6px -4px hsl(0 0% 0% / 0.15);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.3), 0 8px 10px -6px hsl(0 0% 0% / 0.15);
+    --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 0.4);
+    --tracking-normal: 0em;
+    --spacing: 0.25rem;
+  }
+
+  /* Dark mode is the default — keep .dark identical for compatibility */
+  .dark {
+    --background: 222 47% 4%;
+    --foreground: 210 40% 93%;
+    --card: 222 40% 7%;
+    --card-foreground: 210 40% 93%;
+    --popover: 222 40% 7%;
+    --popover-foreground: 210 40% 93%;
+    --primary: 187 92% 55%;
+    --primary-foreground: 222 47% 4%;
+    --secondary: 217 33% 14%;
+    --secondary-foreground: 210 40% 93%;
+    --muted: 217 33% 14%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 187 92% 55%;
+    --accent-foreground: 222 47% 4%;
+    --destructive: 0 63% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 187 92% 55%;
+    --sidebar-background: 222 47% 5%;
+    --sidebar-foreground: 210 40% 93%;
+    --sidebar-primary: 187 92% 55%;
+    --sidebar-primary-foreground: 222 47% 4%;
+    --sidebar-accent: 217 33% 14%;
+    --sidebar-accent-foreground: 210 40% 93%;
+    --sidebar-border: 217 33% 14%;
+    --sidebar-ring: 187 92% 55%;
+    --surface: 222 40% 6%;
+    --surface-elevated: 222 40% 8%;
+    --chart-1: 187 92% 55%;
+    --chart-2: 162 17% 69%;
+    --chart-3: 70 19% 77%;
+    --chart-4: 304 27% 63%;
+    --chart-5: 16 25% 65%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/70 backdrop-blur-xl border border-border rounded-2xl shadow-xl;
+  }
+
+  .glass-input {
+    @apply bg-muted/60 border border-border rounded-xl transition-all duration-200 outline-none;
+  }
+
+  .glass-input:focus {
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.15);
+  }
+
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer text-muted-foreground;
+  }
+
+  .sidebar-item:hover {
+    @apply text-foreground bg-muted/50;
+  }
+
+  .sidebar-item-active {
+    color: hsl(var(--primary)) !important;
+    background: hsl(var(--primary) / 0.1) !important;
+    box-shadow: 0 0 12px hsl(var(--primary) / 0.1);
+  }
+
+  .btn-primary {
+    @apply text-white font-semibold rounded-xl px-6 py-2.5 transition-all duration-200;
+    background: linear-gradient(135deg, hsl(187 92% 45%), hsl(217 91% 55%));
+  }
+
+  .btn-primary:hover {
+    background: linear-gradient(135deg, hsl(187 92% 50%), hsl(217 91% 60%));
+    box-shadow: 0 8px 24px hsl(187 92% 45% / 0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+
+  .stat-card {
+    @apply rounded-2xl p-5 border border-border bg-card transition-all duration-300;
+  }
+
+  .stat-card:hover {
+    border-color: hsl(var(--primary) / 0.3);
+    box-shadow: 0 8px 24px hsl(var(--primary) / 0.08);
+    transform: translateY(-2px);
+  }
+
+  .file-card {
+    @apply rounded-xl p-4 border border-border bg-card/70 backdrop-blur-sm transition-all duration-300 cursor-pointer relative;
+  }
+
+  .file-card:hover {
+    border-color: hsl(var(--primary) / 0.4);
+    box-shadow: 0 12px 32px hsl(0 0% 0% / 0.15);
+    transform: translateY(-4px);
+  }
+
+  .cmd-overlay {
+    @apply fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-background/70 backdrop-blur-sm;
+  }
+
+  .cmd-palette {
+    @apply rounded-2xl shadow-2xl border border-border bg-card w-full max-w-2xl overflow-hidden;
+    box-shadow: 0 25px 60px -10px rgba(0,0,0,0.3);
+  }
+
+  .tag-badge {
+    @apply text-xs font-medium px-2 py-0.5 rounded-full;
+  }
+
+  .aspect-square {
+    aspect-ratio: 1 / 1;
+  }
+
+  .search-mode-active {
+    @apply fixed inset-0 z-[60] pt-[15vh] px-4 bg-background/95 backdrop-blur-md flex flex-col items-center;
+  }
+}
