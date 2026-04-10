@@ -1,13 +1,10 @@
 // ============================================================
 // RepoIR API Service Layer
-// Connects to the live backend on Hugging Face Spaces
+// Connects to the backend via environment variable (VITE_API_BASE_URL).
+// Set VITE_API_BASE_URL in your .env file or in the Render dashboard.
 // ============================================================
 
-// If we are developing locally, we MUST use the full production URL.
-// When deployed on Hugging Face as the 'hub', window.location.origin works correctly.
-export const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-  ? 'https://kallii17-repoir.hf.space'
-  : window.location.origin;
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 // ---- Auth helpers ------------------------------------------
 
