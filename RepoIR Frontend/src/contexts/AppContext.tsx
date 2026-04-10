@@ -169,8 +169,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshStats();
       }
     } catch (err) {
+      // Distinguish between a network/server error (backend unreachable or sleeping)
+      // and an actual invalid-credentials response. The API returns a non-ok response
+      // with a message for bad credentials; a fetch() rejection means network failure.
+      const message = err instanceof Error ? err.message.toLowerCase() : '';
+      const isCredentialsError =
+        message.includes('invalid') ||
+        message.includes('unauthorized') ||
+        message.includes('403') ||
+        message.includes('401');
+
       console.error('Vault status check failed:', err);
-      setVaultStatus('invalid');
+      setVaultStatus(isCredentialsError ? 'invalid' : 'not_connected');
     }
   }, [vaultPassword, refreshFiles, refreshStats]);
 

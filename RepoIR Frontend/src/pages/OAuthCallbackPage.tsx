@@ -14,8 +14,21 @@ export default function OAuthCallbackPage() {
 
     useEffect(() => {
         const code = searchParams.get('code');
-        const vaultPassword = sessionStorage.getItem('repoir_vault_password') || '';
         const redirectUri = `${window.location.origin}/auth/callback`;
+
+        // The vault password was encoded in the OAuth `state` parameter by the parent
+        // window. sessionStorage is NOT shared between windows, so this is the only
+        // reliable way to pass it through the OAuth round-trip.
+        let vaultPassword = '';
+        const stateParam = searchParams.get('state');
+        try {
+            if (stateParam) {
+                const decoded = JSON.parse(atob(stateParam));
+                vaultPassword = decoded.vaultPassword || '';
+            }
+        } catch {
+            // ignore malformed state
+        }
 
         if (!code) {
             window.opener?.postMessage(

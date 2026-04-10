@@ -76,7 +76,13 @@ export default function SettingsPage() {
   const prevStatus = useRef(vaultStatus);
 
   useEffect(() => {
-    if (prevStatus.current !== 'valid' && vaultStatus === 'valid') {
+    // Only redirect to dashboard when transitioning from a genuinely disconnected
+    // state → 'valid'. Do NOT redirect if previous state was 'checking' (which
+    // happens on every settings page mount when the vault is already connected).
+    const wasDisconnected = ['not_connected', 'invalid', 'locked'].includes(
+      prevStatus.current as string
+    );
+    if (wasDisconnected && vaultStatus === 'valid') {
       navigate('/dashboard');
     }
     prevStatus.current = vaultStatus;
@@ -129,9 +135,12 @@ export default function SettingsPage() {
     // Build Google OAuth URL directly (matching repoir-hub logic)
     const redirectUri = `${window.location.origin}/auth/callback`;
     const scope = "https://www.googleapis.com/auth/drive.file";
+    // Encode the vault password in the OAuth `state` param — the only reliable
+    // way to pass data to the popup since sessionStorage is NOT shared between windows.
+    const state = btoa(JSON.stringify({ vaultPassword }));
     const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
       redirectUri
-    )}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent`;
+    )}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline&prompt=consent&state=${encodeURIComponent(state)}`;
 
     // Open in a popup window
     const popup = window.open(
