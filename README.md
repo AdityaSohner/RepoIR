@@ -1,6 +1,5 @@
 ---
 title: RepoIR Engine
-emoji: 🛡️
 colorFrom: blue
 colorTo: indigo
 sdk: docker
@@ -24,12 +23,12 @@ Core capabilities:
 - Two-stage ranking with reciprocal rank fusion and LLM-based relevance filtering.
 - Privacy-first architecture with local-first indexing and encrypted storage patterns.
 
-## This Repository
+## Deployments
 
-This repo is backend-only.
-
-- Frontend project URL (placeholder): https://your-frontend-url.example
-- Live deployed frontend URL (placeholder): https://your-live-frontend.example
+| Service | URL |
+|---|---|
+| 🖥️ **Frontend** | https://repoir.onrender.com |
+| ⚙️ **Backend API** | https://kallii17-repoir.hf.space |
 
 ## Architecture Summary
 
