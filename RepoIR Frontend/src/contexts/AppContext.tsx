@@ -88,7 +88,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ── Theme ──
   useEffect(() => {
     localStorage.setItem('repoir_theme', theme);
-    document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
   // ── Keyboard shortcut for command palette ──

@@ -5,6 +5,7 @@ import {
   HiOutlineDocument,
   HiOutlinePencil,
   HiOutlineCollection,
+  HiOutlineLink,
 } from 'react-icons/hi';
 import { useApp } from '@/contexts/AppContext';
 import { formatFileSize } from '@/lib/api';
@@ -26,12 +27,14 @@ export default function StatsCards() {
       count: stats
         ? (stats.document?.count ?? 0) +
         (stats.image?.count ?? 0) +
-        (stats.text?.count ?? 0)
+        (stats.text?.count ?? 0) +
+        (stats.url?.count ?? 0)
         : null,
       size: stats
         ? (stats.document?.total_size_bytes ?? 0) +
         (stats.image?.total_size_bytes ?? 0) +
-        (stats.text?.total_size_bytes ?? 0)
+        (stats.text?.total_size_bytes ?? 0) +
+        (stats.url?.total_size_bytes ?? 0)
         : null,
     },
     {
@@ -72,10 +75,23 @@ export default function StatsCards() {
         ? (stats.text?.total_size_bytes ?? 0)
         : null,
     },
+    {
+      key: 'urls',
+      label: 'URLs',
+      icon: HiOutlineLink,
+      gradient:
+        'linear-gradient(135deg, hsl(150 80% 45%), hsl(170 80% 45%))',
+      count: stats
+        ? (stats.url?.count ?? 0)
+        : null,
+      size: stats
+        ? (stats.url?.total_size_bytes ?? 0)
+        : null,
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
       {cards.map((card, index) => {
         const Icon = card.icon;
         return (

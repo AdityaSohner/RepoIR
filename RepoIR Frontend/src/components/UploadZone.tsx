@@ -52,6 +52,7 @@ export default function UploadZone() {
   const [textInput, setTextInput] = useState('');
   const [filenameInput, setFilenameInput] = useState('');
   const [miniIngestLoading, setMiniIngestLoading] = useState(false);
+  const [showJobs, setShowJobs] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // ── Helpers ────────────────────────────────────────────────
@@ -79,11 +80,14 @@ export default function UploadZone() {
             addNotification(`"${name}" failed: ${res.error}`, 'error');
           }
         }
-      } catch {
-        clearInterval(id);
+      } catch (err) {
+        console.error('Job poll err:', err);
       }
-      if (attempts > 120) clearInterval(id);
-    }, 800);
+      if (attempts > 120) {
+        clearInterval(id);
+        updateJob(jobId, { status: 'failed', error: 'Timed out' });
+      }
+    }, 2000);
   };
 
   // ── File Upload ────────────────────────────────────────────
@@ -392,12 +396,24 @@ export default function UploadZone() {
       </AnimatePresence>
 
       {/* Active Jobs */}
-      <AnimatePresence>
+      <div className="flex justify-start mt-2">
         {jobs.length > 0 && (
+          <button
+            onClick={() => setShowJobs(!showJobs)}
+            className="text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showJobs ? 'Hide Ingestion Activity' : `Show Ingestion Activity (${jobs.length})`}
+          </button>
+        )}
+      </div>
+
+      <AnimatePresence>
+        {jobs.length > 0 && showJobs && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            className="space-y-2"
+            exit={{ opacity: 0, height: 0 }}
+            className="space-y-2 pt-2"
           >
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               Ingestion Jobs

@@ -126,27 +126,50 @@ export default function FileCard({ file, onPreview, index, view = 'grid' }: File
     >
       {/* Square Thumbnail/Icon area (1:1) */}
       <div className="w-full aspect-square rounded-xl overflow-hidden mb-4 bg-muted/40 relative group-hover:bg-muted/60 transition-all duration-300">
-        {file.type === 'image' && file.thumbnail_url ? (
-          <img
-            src={file.thumbnail_url}
-            alt={file.source}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-            {file.icon_url ? (
+        {/* Fallback Icon (Z-index 0) */}
+        <div className="w-full h-full flex flex-col items-center justify-center gap-2 absolute inset-0 z-0">
+          {file.icon_url ? (
+            <img
+              src={file.icon_url}
+              alt={file.type}
+              className="w-12 h-12 object-contain"
+            />
+          ) : (
+            <Icon className="w-12 h-12" style={{ color: style.color }} />
+          )}
+          <span className="text-[10px] font-bold uppercase tracking-wider opacity-40" style={{ color: style.color }}>
+            {file.file_type.replace('.', '')}
+          </span>
+        </div>
+
+        {/* Thumbnail Content (Z-index 10) */}
+        {(file.thumbnail_url || (file.file_path && file.type !== 'url')) && (
+          <div className="absolute inset-0 z-10 bg-white overflow-hidden rounded-xl transition-transform duration-500 group-hover:scale-105 pointer-events-none">
+            {file.thumbnail_url ? (
               <img
-                src={file.icon_url}
-                alt={file.type}
-                className="w-12 h-12 object-contain"
+                src={file.thumbnail_url}
+                alt={file.source}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
               />
-            ) : (
-              <Icon className="w-12 h-12" style={{ color: style.color }} />
-            )}
-            <span className="text-[10px] font-bold uppercase tracking-wider opacity-40" style={{ color: style.color }}>
-              {file.file_type.replace('.', '')}
-            </span>
+            ) : file.type === 'document' ? (
+              <iframe
+                src={`https://drive.google.com/file/d/${file.file_path}/preview`}
+                className="border-0 bg-white absolute"
+                style={{
+                  width: '300%',
+                  height: '300%',
+                  transform: 'scale(0.333)',
+                  transformOrigin: '0 0',
+                  top: '-18px' // Hides the drive header cleanly
+                }}
+                scrolling="no"
+                tabIndex={-1}
+              />
+            ) : null}
           </div>
         )}
       </div>

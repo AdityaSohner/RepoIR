@@ -23,14 +23,9 @@ export default function FileGrid() {
     setExtFilter('all');
   }, [searchParams]);
 
-  const setTypeAndUrl = (type: string) => {
-    if (type === 'all') {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete('type');
-      setSearchParams(newParams);
-    } else {
-      setSearchParams({ type });
-    }
+  const handleTypeFilterClick = (type: string) => {
+    setTypeFilter(type);
+    setExtFilter('all');
   };
 
   // Load files on mount
@@ -51,7 +46,7 @@ export default function FileGrid() {
 
   const getExtOptions = () => {
     if (typeFilter === 'document') return ['docx', 'pdf', 'pptx', 'xlsx'];
-    if (typeFilter === 'image') return ['jpg', 'png', 'svg', 'webp'];
+    if (typeFilter === 'image') return ['jpg', 'png'];
     if (typeFilter === 'url') return ['link', 'web'];
     return [];
   };
@@ -86,12 +81,12 @@ export default function FileGrid() {
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Type filter pills - Show ONLY in Gallery section */}
-          {typeFilter === 'all' && (
+          {(!searchParams.get('type') || searchParams.get('type') === 'all') && (
             <div className="flex items-center gap-1 p-1 rounded-xl bg-muted">
               {typeFilterOptions.map((opt) => (
                 <button
                   key={opt.value}
-                  onClick={() => setTypeAndUrl(opt.value)}
+                  onClick={() => handleTypeFilterClick(opt.value)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${typeFilter === opt.value
                     ? 'bg-background shadow-sm text-foreground'
                     : 'text-muted-foreground hover:text-foreground'

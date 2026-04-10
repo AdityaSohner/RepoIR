@@ -2,9 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import { AppProvider } from "./contexts/AppContext";
+import { AppProvider, useApp } from "./contexts/AppContext";
+import { useEffect } from "react";
 
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
@@ -15,8 +16,32 @@ import DashboardPage from "./pages/DashboardPage";
 import ProfilePage from "./pages/ProfilePage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
+import LandingPage from "./pages/LandingPage";
 
 const queryClient = new QueryClient();
+
+function ThemeManager() {
+  const location = useLocation();
+  const { theme } = useApp();
+
+  useEffect(() => {
+    const isDashboardArea = 
+      location.pathname.startsWith('/dashboard') || 
+      location.pathname.startsWith('/profile') || 
+      location.pathname.startsWith('/settings');
+
+    // Force light theme on non-dashboard pages
+    const effectiveTheme = isDashboardArea ? theme : 'light';
+
+    if (effectiveTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [location.pathname, theme]);
+
+  return null;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -26,9 +51,10 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ThemeManager />
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />

@@ -62,23 +62,12 @@ export default function TopNav({ onMenuClick }: TopNavProps) {
             <HiOutlineMenu className="w-5 h-5" />
           </button>
 
-          <div className="hidden sm:block">
-            <h2 className="text-lg font-semibold text-foreground">
-              RepoIR
-            </h2>
-          </div>
+
         </div>
 
         {/* Right */}
         <div className="flex items-center gap-2">
-          {/* Global Search Button */}
-          <button
-            onClick={() => setImmersiveSearchOpen(true)}
-            className="p-2.5 hover:bg-muted rounded-xl transition-colors hidden sm:block"
-            title="Search Vault (⌘K)"
-          >
-            <HiOutlineSearch className="w-5 h-5 text-muted-foreground" />
-          </button>
+
           {/* Vault status dot */}
           {vaultBadge && (
             <div

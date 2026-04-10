@@ -54,22 +54,7 @@ export default function DashboardPage() {
       {/* Greeting and Big Search - Only on Home */}
       {isHome && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center py-12 px-4 text-center">
-          <h1 className="text-3xl lg:text-5xl font-extrabold text-foreground mb-4 tracking-tight">
-            {getGreeting()},{' '}
-            <span
-              style={{
-                background:
-                  'linear-gradient(90deg, hsl(187 92% 55%), hsl(217 91% 65%))',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              {user?.name}
-            </span>
-          </h1>
-          <p className="text-lg text-muted-foreground mb-10 max-w-2xl">
-            Welcome to RepoIR. Your entire knowledge base is indexed, semantically searchable, and readily available. Just ask your AI.
-          </p>
+
           
           <button
             onClick={() => setImmersiveSearchOpen(true)}
@@ -79,14 +64,7 @@ export default function DashboardPage() {
             <span className="text-xl text-muted-foreground font-medium text-left flex-1">
               Ask AI to find anything in your repository...
             </span>
-            <div className="hidden sm:flex items-center gap-2 opacity-50">
-              <kbd className="px-3 py-1.5 rounded-lg text-sm font-bold bg-background border border-border shadow-sm">
-                ⌘
-              </kbd>
-              <kbd className="px-3 py-1.5 rounded-lg text-sm font-bold bg-background border border-border shadow-sm">
-                K
-              </kbd>
-            </div>
+            {/* Removed ⌘ K per request */}
           </button>
         </motion.div>
       )}

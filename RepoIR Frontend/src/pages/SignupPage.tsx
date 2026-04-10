@@ -88,17 +88,11 @@ export default function SignupPage() {
         className="relative w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div
-            className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center"
-            style={{
-              background:
-                'linear-gradient(135deg, hsl(187 92% 45%), hsl(217 91% 55%))',
-            }}
-          >
-            <span className="text-2xl font-bold text-white">R</span>
+          <div className="w-[144px] h-[144px] mx-auto mb-4 flex items-center justify-center overflow-hidden">
+            <img src="/logo-no-title.png" alt="RepoIR Logo" className="w-[128px] h-[128px] object-contain translate-y-2" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">RepoIR</h1>
-          <p className="text-muted-foreground">AI Knowledge Repository</p>
+          <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 tracking-tight mb-2">RepoIR</h1>
+          <p className="text-muted-foreground">The AI Powered Archive</p>
         </div>
 
         <div className="glass-card p-8">

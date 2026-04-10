@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -61,6 +61,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const { stats, vaultStatus } = useApp();
   const { user } = useAuth();
+
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const totalCount = stats
     ? (stats.document?.count ?? 0) +
@@ -150,28 +158,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <motion.aside
         initial={false}
-        animate={{ x: (window.innerWidth >= 1024 || isOpen) ? 0 : '-100%' }}
+        animate={{ x: (isDesktop || isOpen) ? 0 : '-100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         className="fixed lg:sticky top-0 h-screen left-0 z-50 w-72 flex flex-col border-r border-border bg-sidebar lg:translate-x-0"
       >
         {/* Logo */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div className="flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{
-                background:
-                  'linear-gradient(135deg, hsl(187 92% 45%), hsl(217 91% 55%))',
-              }}
-            >
-              <span className="text-lg font-bold text-white">R</span>
+            <div className="w-[88px] h-[88px] flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img src="/logo-no-title.png" alt="RepoIR" className="w-[80px] h-[80px] object-contain translate-y-1" />
             </div>
             <div>
-              <span className="text-lg font-semibold text-foreground block leading-tight">
+              <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 tracking-tight block leading-tight">
                 RepoIR
               </span>
               <span className="text-xs text-muted-foreground">
-                AI Knowledge Base
+                The AI Powered Archive
               </span>
             </div>
           </div>
