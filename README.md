@@ -1,11 +1,3 @@
----
-title: RepoIR Engine
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-pinned: false
----
-
 # RepoIR Backend
 
 Privacy-first AI search backend for multimodal personal data.
