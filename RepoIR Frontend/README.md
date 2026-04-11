@@ -1,94 +1,75 @@
-# RepoIR – Privacy-First AI Search Engine
+# RepoIR Frontend: The Semantic Interface
 
-> An advanced, privacy-first AI search gateway designed for developers and privacy-conscious users. Securely ingest, auto-categorize, and semantically search through a multimodal array of personal data — while maintaining complete ownership and encryption of your data.
-
----
-
-## Features
-
-### Multi-Modal Data Ingestion & Cloud Syncing
-
-- **Diverse Sources** — Upload PDFs, DOCX, images (JPG/PNG), web URLs, and raw text snippets.
-- **Encrypted Google Drive Vault** — OAuth integration creates a secured "Cloud Vault" that auto-syncs files and fetches native high-res thumbnails directly from Google Drive.
-- **Asynchronous Processing** — Ingestion workloads (OCR, chunking, vectorization) run on background workers so the API and UI stay fast.
-- **OCR Integration** — Tesseract OCR extracts text from images, making visual data fully searchable alongside text.
-
-### Two-Stage Intelligent Semantic Search
-
-| Stage | What Happens |
-|-------|-------------|
-| **1 — Hybrid Retrieval** | Combines BM25 keyword search (SQLite FTS5) with dense vector search (FAISS + Sentence-Transformers), merged via **Reciprocal Rank Fusion (RRF)**. |
-| **2 — Re-Ranking & LLM Filtering** | Applies filename-boosting heuristics and pipes candidates through **SambaNova Meta-Llama 3.1 8B** as a strict relevance filter. Uses **Anchor-Chunk Voting** (cosine similarity weighted toward document start/end) for better context understanding. |
-
-### Privacy & Security
-
-- **Local-First Indexing** — Vector chunking (FAISS) and metadata indexing (SQLite) happen locally and ephemerally.
-- **JWT Authentication** — Standard token-based auth with Google OAuth verification.
-- **AES-256 Vault Encryption** — Cloud-stored data is encrypted at rest.
+The official React-based dashboard for the RepoIR search engine. This interface provides a beautiful, responsive, and intuitive way to manage your private data vault and perform semantic searches.
 
 ---
 
-## Tech Stack
+## ✨ Features
 
-| Layer | Technologies |
-|-------|-------------|
-| **Frontend** | React, TypeScript, Vite, Tailwind CSS, shadcn/ui |
-| **Backend** | Python, FastAPI, AsyncIO |
-| **Vector & Database** | FAISS (Facebook AI Similarity Search), SQLite with FTS5 |
-| **AI / ML** | sentence-transformers (`all-MiniLM-L6-v2`), SambaNova Cloud API (`Meta-Llama-3.1-8B-Instruct`), NumPy |
-| **Computer Vision** | Tesseract OCR |
-| **Integrations** | Google Drive API (OAuth 2.0) |
+- **Omni-Search Bar**: Perform natural language queries across all your documents, images, and web links.
+- **Visual Analytics**: Real-time charts showing your data distribution across different categories.
+- **Activity Timeline**: Track your ingestion history and search patterns in a sleek sidebar.
+- **Cloud Vault Manager**: Securely connect and unlock your Google Drive vault with password-protected AES session syncing.
+- **Multimodal Ingestor**: 
+  - Drag-and-drop file uploads.
+  - One-click URL scanning.
+  - Rapid text snippet indexing.
+- **Smart Previews**: View your cloud-stored documents and images directly within the app via secure streaming proxies.
 
 ---
 
-## Getting Started
+## 🛠️ Technical Implementation
+
+### Frontend Stack
+- **Framework**: [React 18+](https://reactjs.org/) with [Vite](https://vitejs.dev/) for ultra-fast HMR.
+- **Language**: [TypeScript](https://www.typescriptlang.org/) for robust type-safety.
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) for a premium, modern aesthetic.
+- **State Management**: React Context API for authentication and global application state.
+
+### Backend Connectivity
+The frontend communicates with the FastAPI backend via a dedicated `api.ts` layer that handles:
+- **JWT Authorization**: Automatic token attachment to requests.
+- **Job Polling**: Real-time status updates for heavy ingestion tasks.
+- **Error Handling**: Graceful fallback UI for network or auth issues.
+
+---
+
+## 📥 Getting Started
 
 ### Prerequisites
-
-- [Node.js](https://nodejs.org/) (v18+) or [Bun](https://bun.sh/)
+- [Node.js](https://nodejs.org/) (v18 or higher)
+- [npm](https://www.npmjs.com/) or [bun](https://bun.sh/)
 
 ### Installation
-
 ```bash
-# Clone the repository
-git clone https://github.com/AdityaSohner/RepoIR.git
-cd RepoIR
+# Navigate to the frontend directory
+cd "RepoIR Frontend"
 
 # Install dependencies
 npm install
-# or
-bun install
 
-# Start the dev server
+# Configure environment (Optional)
+# Create .env.local and set VITE_API_BASE_URL if running a local backend
+# echo "VITE_API_BASE_URL=http://localhost:8000" > .env.local
+
+# Launch the development server
 npm run dev
-# or
-bun dev
 ```
-
-The frontend will be available at `http://localhost:5173` (default Vite port).
-
-> **Note:** The frontend connects to the live RepoIR backend hosted on Hugging Face Spaces. No local backend setup is required to run the UI.
+The app will be available at `http://localhost:5173`.
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
-```
-├── public/              # Static assets
-├── src/
-│   ├── components/      # React components (UI + feature)
-│   │   └── ui/          # shadcn/ui primitives
-│   ├── contexts/        # React context providers (Auth, App state)
-│   ├── hooks/           # Custom React hooks
-│   ├── lib/             # API service layer & utilities
-│   ├── pages/           # Route-level page components
-│   └── test/            # Test setup & specs
-├── backend.txt          # Backend API documentation
-└── vite.config.ts       # Vite configuration
-```
+| Directory | Purpose |
+| :--- | :--- |
+| `src/components` | UI primitives and feature-specific React components. |
+| `src/contexts` | Global state (Auth, App Settings). |
+| `src/pages` | Route definitions (Search, Dashboard, Auth). |
+| `src/lib` | API wrappers (`api.ts`) and utility functions. |
+| `src/hooks` | Custom React hooks for API polling and UI logic. |
 
 ---
 
-## License
-
+## 📄 License
 This project is proprietary. All rights reserved.
