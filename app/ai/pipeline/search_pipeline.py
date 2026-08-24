@@ -1,10 +1,9 @@
 import numpy as np
-import os
-import json
 import asyncio
 from app.ai.embeddings.text_embedder import TextEmbedder
 from app.storage.db_store import DBStore
 from app.storage.faiss_store import FAISSStore
+from sentence_transformers import CrossEncoder
 
 
 def _reciprocal_rank_fusion(ranked_lists: list[list[str]], k: int = 60) -> list[str]:
@@ -31,56 +30,76 @@ def _reciprocal_rank_fusion(ranked_lists: list[list[str]], k: int = 60) -> list[
     return sorted(scores, key=lambda x: scores[x], reverse=True)
 
 
+# ── Module-level CrossEncoder singleton (loads once, cached for the process) ──
+_reranker: CrossEncoder | None = None
+
+def _get_reranker() -> CrossEncoder:
+    global _reranker
+    if _reranker is None:
+        print("[*] Loading CrossEncoder reranker (BAAI/bge-reranker-v2-m3)...")
+        _reranker = CrossEncoder("BAAI/bge-reranker-v2-m3")
+        print("[+] CrossEncoder reranker ready.")
+    return _reranker
+
+
 class SearchPipeline:
     def __init__(self, user_id: str = "default"):
         self.embedder = TextEmbedder()
         self.db = DBStore(user_id=user_id)
         self.faiss = FAISSStore(user_id=user_id)
 
-    async def _rerank_with_llm(self, query: str, candidates: list[dict]) -> list[dict]:
-        """Uses SambaNova Online LLM to filter and rank candidates strictly."""
-        from app_server import call_llm
-        
+    def _rerank_with_cross_encoder(self, query: str, candidates: list[dict]) -> list[dict]:
+        """
+        Reranks candidates using a local BAAI/bge-reranker-v2-m3 CrossEncoder.
+        Returns candidates with rerank_score attached, filtered to score > 0.5.
+        Falls back to pre-rerank order on any error.
+        """
         if not candidates:
             return []
 
-        # Prepare a condensed list for the LLM
-        candidate_list = []
-        for i, c in enumerate(candidates):
-            candidate_list.append({
-                "id": c["object_id"],
-                "index": i,
-                "name": c["source"],
-                "type": c["type"]
-            })
-
-        prompt = (
-            f"User Query: '{query}'\n"
-            f"Candidates: {json.dumps(candidate_list)}\n\n"
-            "Task: Rank these files by strict relevance to the query. "
-            "Rule 1: If a file does NOT directly and specifically relate to the user's explicit query, you MUST completely EXCLUDE it. Do not include loosely related noise. "
-            "Rule 2: Prioritize files that exact-match the core intent. If a URL or file only lightly touches on it, drop it. "
-            "Return ONLY a JSON array of object_ids in the new ranked order. "
-            "Example Output: ['id1', 'id2']"
-        )
-
         try:
-            response_text = await call_llm(prompt)
-            # Find JSON array in response
-            import re
-            match = re.search(r"\[.*\]", response_text.replace("\n", ""))
-            if match:
-                ordered_ids = json.loads(match.group(0))
-                # Map back to full objects
-                id_map = {c["object_id"]: c for c in candidates}
-                return [id_map[oid] for oid in ordered_ids if oid in id_map]
+            reranker = _get_reranker()
+
+            pairs = []
+            valid_candidates = []
+            for c in candidates:
+                chunk_text = self.db.get_best_chunk_text_for_object(c["object_id"])
+                if chunk_text:
+                    pairs.append((query, chunk_text))
+                    valid_candidates.append(c)
+                else:
+                    c["rerank_score"] = 0.0
+
+            if not pairs:
+                print("[WARNING] Reranker: no chunk text found for any candidate, skipping rerank.")
+                return candidates
+
+            scores = reranker.predict(pairs)
+            print(f"[*] Reranker scored {len(pairs)} candidates. Scores: {[round(float(s), 3) for s in scores]}")
+
+            for c, score in zip(valid_candidates, scores):
+                c["rerank_score"] = float(score)
+
+            for c in candidates:
+                if "rerank_score" not in c:
+                    c["rerank_score"] = 0.0
+
+            reranked = [c for c in candidates if c["rerank_score"] > 0.5]
+            reranked.sort(key=lambda x: x["rerank_score"], reverse=True)
+            print(f"[*] Reranker: {len(reranked)}/{len(candidates)} candidates passed >0.5 threshold.")
+
+            if not reranked:
+                print("[WARNING] Reranker: no candidates passed threshold, returning all scored.")
+                reranked = sorted(candidates, key=lambda x: x["rerank_score"], reverse=True)
+
+            return reranked
+
         except Exception as e:
-            print(f"⚠️ Re-ranking failed: {e}")
-        
-        return candidates # Fallback to original rank
+            print(f"[ERROR] CrossEncoder reranker failed: {e}. Falling back to pre-rerank ordering.")
+            return candidates
 
     def search(self, query: str, top_k: int = 5) -> list[dict]:
-        """Wrapper to run the async search in a synchronous context if needed, 
+        """Wrapper to run the async search in a synchronous context if needed,
         but in our FastAPI app we will call it properly."""
         loop = asyncio.get_event_loop()
         if loop.is_running():
@@ -92,8 +111,8 @@ class SearchPipeline:
     async def search_async(self, query: str, top_k: int = 10) -> list[dict]:
         """
         Two-Stage Intelligent Search:
-        1. Retrieval: BM25 + Vector + Filename Boosting
-        2. Re-Ranking: Online LLM Quality filter
+        1. Retrieval: BM25 + Vector + RRF merge
+        2. Re-Ranking: Local CrossEncoder (BAAI/bge-reranker-v2-m3) quality filter
         """
         if not query.strip():
             return []
@@ -103,10 +122,10 @@ class SearchPipeline:
 
         # ── Stage 1: Retrieval ─────────────────────────────────────────────
         bm25_chunk_ids = self.db.keyword_search(query, k=candidate_count)
-        
+
         query_vector = self.embedder.embed(query)
         distances, vector_ids = self.faiss.search_with_scores(query_vector, k=candidate_count)
-        
+
         # Relaxed threshold to maintain semantic connections without grabbing complete noise
         valid_vids = [vid for dist, vid in zip(distances, vector_ids) if dist < 1.3]
         faiss_chunk_ids = [self.db.get_chunk_id_by_vector(vid) for vid in valid_vids]
@@ -127,8 +146,10 @@ class SearchPipeline:
         # Fetch metadata
         candidates = self.db.get_objects_by_ids(object_ids)
 
-        # ── Stage 2: Strategy (Boosting) ────────────────────────
-        # Filename Boosting
+        if not candidates:
+            return []
+
+        # ── Stage 2: Filename Boosting ───────────────────────────────────
         boosted = []
         others = []
         for c in candidates:
@@ -137,9 +158,14 @@ class SearchPipeline:
                 boosted.append(c)
             else:
                 others.append(c)
-        
+
         candidates = boosted + others
 
-        # By removing the LLM filter, we eliminate the logical error 
-        # where perfectly valid files with non-descriptive names were dropped.
-        return candidates[:top_k]
+        # ── Stage 3: CrossEncoder Reranking ──────────────────────────────
+        # Run in a thread so we don't block the async event loop
+        reranked = await asyncio.to_thread(
+            self._rerank_with_cross_encoder, query, candidates
+        )
+
+        return reranked
+

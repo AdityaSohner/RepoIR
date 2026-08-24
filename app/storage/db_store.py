@@ -208,6 +208,23 @@ class DBStore:
         ).fetchone()
         return row["chunk_text"] if row else None
 
+    def get_chunk_text_by_id(self, chunk_id: str) -> str | None:
+        """Fetches the actual text content of a chunk by its chunk_id."""
+        row = self.conn.execute(
+            "SELECT chunk_text FROM chunks WHERE chunk_id = ?", (chunk_id,)
+        ).fetchone()
+        return row["chunk_text"] if row else None
+
+    def get_best_chunk_text_for_object(self, object_id: str) -> str | None:
+        """Fetches the first (anchor) chunk text for an object, used for reranking."""
+        row = self.conn.execute(
+            "SELECT chunk_text FROM chunks WHERE object_id = ? ORDER BY chunk_index ASC LIMIT 1",
+            (object_id,)
+        ).fetchone()
+        return row["chunk_text"] if row else None
+
+
+
 
     def close(self):
         self.conn.close()

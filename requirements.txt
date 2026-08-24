@@ -21,6 +21,9 @@ pillow
 pytesseract
 pdf2image
 
+# Audio Processing
+librosa
+
 # URL / Web Content Extraction
 requests
 beautifulsoup4
@@ -31,6 +34,9 @@ sentence-transformers
 # spacy
 # nltk
 torch
+openai-whisper
+trafilatura
+playwright
 
 # Vector Database
 faiss-cpu

@@ -1,0 +1,16 @@
+{
+  "name": "repoir-workspace",
+  "version": "1.0.0",
+  "description": "RepoIR Unified Dev Workspace",
+  "scripts": {
+    "setup:backend": "python -m venv env && .\\env\\Scripts\\pip install -r requirements.txt",
+    "setup:frontend": "npm install --prefix \"RepoIR Frontend\"",
+    "setup": "npm run setup:backend && npm run setup:frontend",
+    "dev:backend": "set PYTHONUNBUFFERED=1&& .\\env\\Scripts\\python main.py",
+    "dev:frontend": "npm run dev --prefix \"RepoIR Frontend\"",
+    "dev": "concurrently -n \"backend,frontend\" -c \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

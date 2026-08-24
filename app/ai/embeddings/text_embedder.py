@@ -17,7 +17,7 @@ class TextEmbedder:
         torch.set_num_threads(1)
         
         if _MODEL_INSTANCE is None:
-            print(f"🧠 Loading AI Model: {model_name}...")
+            print(f"[*] Loading AI Model: {model_name}...")
             _MODEL_INSTANCE = SentenceTransformer(model_name)
         self.model = _MODEL_INSTANCE
 

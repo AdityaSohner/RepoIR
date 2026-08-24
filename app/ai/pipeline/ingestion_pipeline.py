@@ -2,6 +2,7 @@ from app.ai.extractors.doc_extractor import DocumentExtractor
 from app.ai.extractors.img_extractor import ImageExtractor
 from app.ai.extractors.url_extractor import LinkExtractor
 from app.ai.extractors.vision_describer import VisionDescriber
+from app.ai.extractors.audio_extractor import AudioExtractor, NoSpeechError
 from app.ai.chunker.text_chunker import TextChunker
 from app.ai.embeddings.text_embedder import TextEmbedder
 from app.storage.id_generator import generate_object_id
@@ -40,11 +41,23 @@ class IngestionPipeline:
             extractor = ImageExtractor()
         elif source_type == "url":
             extractor = LinkExtractor()
+        elif source_type == "audio":
+            extractor = AudioExtractor()
         else:
             raise ValueError(f"Unsupported source type: {source_type}")
 
-        user_id = self.db.user_dir.name 
-        extraction_result = extractor.extract(source, extension=extension)
+        user_id = self.db.user_dir.name
+        try:
+            extraction_result = extractor.extract(source, extension=extension)
+        except NoSpeechError as e:
+            msg = str(e)
+            print(f"[INFO] IngestionPipeline: {msg}")
+            return {
+                "skipped": True,
+                "reason": "no_speech",
+                "message": "No speech detected — file not saved or indexed.",
+                "detail": msg,
+            }
         raw_text = extraction_result["raw_text"]
         file_type = extraction_result["metadata"]["file_type"]
 
@@ -63,6 +76,7 @@ class IngestionPipeline:
         else:
             semantic_text = raw_text
 
+
         if source_type == "image":
             try:
                 if hasattr(source, 'seek'):
@@ -70,17 +84,31 @@ class IngestionPipeline:
                 vision_text = self.vision.describe(source)
                 if vision_text:
                     semantic_text = (semantic_text + "\n\n" + vision_text).strip()
+                    # Append description to log file for review
+                    try:
+                        log_path = os.path.join(os.getcwd(), "image_descriptions.txt")
+                        with open(log_path, "a", encoding="utf-8") as lf:
+                            lf.write(f"File: {original_name or 'unknown'}\n")
+                            lf.write(f"Description:\n{vision_text}\n")
+                            lf.write("-" * 50 + "\n\n")
+                    except Exception as log_err:
+                        print(f"[WARNING] Could not write to image_descriptions.txt: {log_err}")
             except Exception as vision_err:
-                print(f"⚠️ Vision description failed: {vision_err}")
+                print(f"[WARNING] Vision description failed: {vision_err}")
             
             if not semantic_text.strip():
                 # Fallback to filename if vision and OCR both fail
                 semantic_text = original_name or "Untitled Image"
-                print(f"⚠️ Image content extraction failed. Falling back to filename: {semantic_text}")
+                print(f"[WARNING] Image content extraction failed. Falling back to filename: {semantic_text}")
         elif not semantic_text.strip():
             # Fallback to filename for other documents too
             semantic_text = original_name or "Untitled Document"
-            print(f"⚠️ Document content extraction failed. Falling back to filename: {semantic_text}")
+            print(f"[WARNING] Document content extraction failed. Falling back to filename: {semantic_text}")
+
+        # Prepend filename + date so they are embedded and keyword-searchable
+        from datetime import date
+        header = f"Filename: {original_name}\nDate: {date.today().isoformat()}" if original_name else f"Date: {date.today().isoformat()}"
+        semantic_text = (header + "\n\n" + semantic_text).strip()
 
         chunks = self.chunker.chunk(semantic_text)
         if not chunks:
@@ -105,10 +133,8 @@ class IngestionPipeline:
         elif source_type == "url":
             file_size = len(semantic_text.encode('utf-8'))
 
-
+        # Local file storage is disabled — original files go to Google Drive only.
         file_path = None
-        if source_type in ("document", "image", "text") and not skip_local_storage:
-            file_path = save_file(source, object_id, f"{source_type}s", original_filename=original_name)
 
         self.db.store_object(
             object_id, user_id, original_name or str(source), 

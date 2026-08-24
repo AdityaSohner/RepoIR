@@ -30,11 +30,11 @@ app = FastAPI(title="RepoIR: Privacy-First AI Search Gateway")
 
 @app.on_event("startup")
 async def startup_event():
-    print("⏳ Pre-warming AI components...")
+    print("[*] Pre-warming AI components...")
     # Initialize the singleton instance and limit torch threads safely within the app context
     from app.ai.embeddings.text_embedder import TextEmbedder
     _initial_embedder = TextEmbedder()
-    print("✅ Core AI Ready.")
+    print("[+] Core AI Ready.")
 
 app.add_middleware(
     CORSMiddleware,
@@ -69,6 +69,8 @@ def get_source_type(filename: str) -> str:
         return "image"
     if ext in (".pdf", ".docx", ".pptx", ".xlsx", ".xls"):
         return "document"
+    if ext in (".mp3", ".mp4", ".wav", ".m4a", ".ogg", ".flac", ".webm"):
+        return "audio"
     return "document" # Fallback for unknown documents
 
 # --- Background Workers ---
@@ -78,8 +80,11 @@ def background_worker(user_id: str, job_id: str, source: any, source_type: str, 
     try:
         db.update_job_status(job_id, "processing")
         engine = IngestionPipeline(user_id=user_id)
-        engine.ingest(source, source_type, extension, original_name)
-        db.update_job_status(job_id, "completed")
+        result = engine.ingest(source, source_type, extension, original_name)
+        if result.get("skipped"):
+            db.update_job_status(job_id, "skipped", result.get("message"))
+        else:
+            db.update_job_status(job_id, "completed")
     except Exception as e:
         db.update_job_status(job_id, "failed", str(e))
 
@@ -92,7 +97,14 @@ def cloud_background_worker(user_id: str, job_id: str, stream: io.BytesIO, sourc
 
         print(f"DEBUG UPLOAD: Starting original-file upload for {filename}")
         # Ingest for search indexing (still happens locally/offline)
-        engine.ingest(stream, source_type, ext, filename, object_id=object_id, skip_local_storage=True)
+        result = engine.ingest(stream, source_type, ext, filename, object_id=object_id, skip_local_storage=True)
+
+        # If no speech was detected, skip Drive upload entirely
+        if result.get("skipped"):
+            msg = result.get("message", "No speech detected — file not saved or indexed.")
+            print(f"[INFO] cloud_background_worker: {msg}")
+            db.update_job_status(job_id, "skipped", msg)
+            return
         
         db.update_job_status(job_id, "uploading")
         gdrive = GDriveManager(user_id=user_id, user_password=password)
@@ -130,7 +142,7 @@ def cloud_background_worker(user_id: str, job_id: str, stream: io.BytesIO, sourc
         db.update_job_status(job_id, "completed")
         print(f"DEBUG UPLOAD: COMPLETED for {filename}")
     except Exception as e:
-        print(f"❌ DEBUG UPLOAD FAILED: {str(e)}")
+        print(f"[ERROR] DEBUG UPLOAD FAILED: {str(e)}")
         db.update_job_status(job_id, "failed", str(e))
 
 import asyncio
@@ -157,7 +169,7 @@ def _call_llm_sync(prompt: str) -> str:
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
     except Exception as e:
-        print(f"⚠️ SambaNova LLM Error: {e}")
+        print(f"[WARNING] SambaNova LLM Error: {e}")
         return ""
 
 async def call_llm(prompt: str) -> str:
@@ -408,16 +420,22 @@ async def search(payload: SearchQuery, user_id: str = Depends(get_current_user))
 async def ingest_local(
     background_tasks: BackgroundTasks,
     files: List[UploadFile] = File(...),
+    password: str = Form(...),
     user_id: str = Depends(get_current_user)
 ):
+    """All file uploads now go through the cloud pipeline (Drive-first)."""
     job_ids = []
     for file in files:
-        job_id = str(uuid.uuid4())
         content = await file.read()
+        job_id = str(uuid.uuid4())
         ext = os.path.splitext(file.filename)[1].lower()
         source_type = get_source_type(file.filename)
-        
-        background_tasks.add_task(background_worker, user_id, job_id, io.BytesIO(content), source_type, file.filename, ext)
+
+        background_tasks.add_task(
+            cloud_background_worker, 
+            user_id, job_id, io.BytesIO(content), 
+            source_type, file.filename, ext, password
+        )
         job_ids.append(job_id)
     return {"status": "accepted", "job_ids": job_ids}
 
@@ -499,8 +517,11 @@ def check_status(job_id: str, user_id: str = Depends(get_current_user)):
 
 @app.get("/v1/files")
 def list_files(category_id: Optional[str] = None, user_id: str = Depends(get_current_user)):
+    """Only return files that have a Drive file_path (Drive-backed objects)."""
     db = DBStore(user_id=user_id)
-    return {"files": db.list_all_objects(category_id=category_id)}
+    all_objects = db.list_all_objects(category_id=category_id)
+    drive_objects = [obj for obj in all_objects if obj.get("file_path")]
+    return {"files": drive_objects}
 
 @app.delete("/v1/files/{object_id}")
 def delete_file(object_id: str, user_id: str = Depends(get_current_user)):
@@ -546,7 +567,9 @@ async def preview_file(object_id: str, password: str, user_id: str = Depends(get
             ".pdf": "application/pdf", ".txt": "text/plain", ".md": "text/markdown",
             ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            ".mp3": "audio/mpeg", ".wav": "audio/wav", ".ogg": "audio/ogg",
+            ".m4a": "audio/mp4", ".flac": "audio/flac", ".webm": "audio/webm"
         }
         content_type = mime_types.get(ext, "application/octet-stream")
         
