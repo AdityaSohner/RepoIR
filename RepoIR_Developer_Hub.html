@@ -12,15 +12,23 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background: #0f172a;
-            color: #f8fafc;
+            background: #07111f;
+            color: #e6f4ff;
+            background-image: radial-gradient(circle at 12% 8%, rgba(14, 165, 233, 0.14), transparent 32%), radial-gradient(circle at 88% 92%, rgba(34, 211, 238, 0.09), transparent 30%);
         }
 
         .glass {
-            background: rgba(30, 41, 59, 0.7);
+            background: rgba(12, 27, 46, 0.82);
             backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(125, 211, 252, 0.14);
         }
+
+        .workspace-grid { display: grid; grid-template-columns: minmax(260px, 320px) minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+        .account-panel { position: sticky; top: 1.5rem; }
+        .connection-dot { width: .55rem; height: .55rem; border-radius: 999px; background: #64748b; box-shadow: 0 0 0 4px rgba(100, 116, 139, .12); }
+        .connection-dot.connected { background: #34d399; box-shadow: 0 0 0 4px rgba(52, 211, 153, .12); }
+        .hub-locked { opacity: .5; pointer-events: none; user-select: none; }
+        @media (max-width: 900px) { .workspace-grid { grid-template-columns: 1fr; } .account-panel { position: static; } }
 
         .card {
             transition: transform 0.2s;
@@ -31,7 +39,7 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            background: linear-gradient(135deg, #06b6d4, #2563eb);
             transition: all 0.2s;
         }
 
@@ -104,16 +112,26 @@
 
 <body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
 
-    <!-- Auth Section (Hidden if logged in) -->
-    <div id="auth-section" class="max-w-md mx-auto mt-20">
-        <div class="glass rounded-2xl p-8 text-center">
-            <div class="flex justify-center mb-6">
-                <div class="p-3 bg-blue-600 rounded-xl">
-                    <i data-lucide="shield" class="w-8 h-8 text-white"></i>
+    <div id="workspace" class="workspace-grid max-w-7xl mx-auto mt-8">
+    <!-- Account Section -->
+    <aside id="auth-section" class="account-panel">
+        <div class="glass rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-6">
+                <div class="flex items-center gap-3">
+                    <div class="p-2.5 bg-cyan-500/15 rounded-xl border border-cyan-400/20">
+                        <i data-lucide="shield-check" class="w-6 h-6 text-cyan-300"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs uppercase tracking-[0.18em] text-cyan-300/80">RepoIR</p>
+                        <h1 class="text-lg font-bold">Account</h1>
+                    </div>
+                </div>
+                <div id="connection-state" class="flex items-center gap-2 text-xs text-slate-400">
+                    <span id="connection-dot" class="connection-dot"></span>
+                    <span id="connection-label">Not connected</span>
                 </div>
             </div>
-            <h1 class="text-3xl font-bold mb-2">RepoIR Engine</h1>
-            <p class="text-slate-400 mb-8">Privacy-First AI Search Gateway</p>
+            <p id="account-help" class="text-sm text-slate-400 mb-6">Sign in to unlock the tools in your workspace.</p>
 
             <div class="space-y-4">
                 <div id="g_id_onload"
@@ -145,25 +163,12 @@
                         class="flex-1 bg-slate-800 hover:bg-slate-700 py-3 rounded-lg font-semibold border border-slate-700">Signup</button>
                 </div>
 
-                <!-- Testing Panel Addition -->
-                <div class="pt-6 mt-6 border-t border-slate-700 text-left">
-                    <p class="text-[10px] text-slate-500 uppercase font-bold mb-2 tracking-widest">Advanced Server
-                        Settings</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="apiBaseOverride" placeholder="Target Server URL"
-                            class="flex-1 bg-slate-900/50 border border-slate-800 rounded px-3 py-1 text-[10px] focus:outline-none">
-                        <button onclick="setApiBase()"
-                            class="px-3 py-1 bg-slate-800 rounded text-[10px] hover:bg-slate-700">Set</button>
-                    </div>
-                    <p class="text-[9px] text-slate-600 mt-1 italic">Current: <span id="currentApiBase"
-                            class="text-blue-400"></span></p>
-                </div>
             </div>
         </div>
-    </div>
+    </aside>
 
-    <!-- Main Hub (Hidden by default) -->
-    <div id="hub-section" class="hidden max-w-7xl mx-auto">
+    <!-- Feature Workspace -->
+    <main id="hub-section" class="hub-locked min-w-0">
         <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
             <div>
                 <h2 class="text-3xl font-bold flex items-center gap-2">
@@ -173,19 +178,6 @@
                 <p class="text-slate-400 mt-1" id="user-display-id">Connected to RepoIR Engine</p>
             </div>
             <div class="flex items-center gap-3">
-                <button onclick="connectDrive()"
-                    class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg border border-slate-700 text-sm flex items-center gap-2">
-                    <i data-lucide="cloud"></i> Connect Drive
-                </button>
-                <div class="flex items-center gap-2 bg-slate-900 border border-slate-700 px-3 py-1 rounded-lg">
-                    <i data-lucide="shield" class="w-4 h-4 text-emerald-500" id="lockIcon"></i>
-                    <input type="password" id="vaultPassword" placeholder="Enter Secret" oninput="updateVaultStatus()"
-                        class="bg-transparent border-none focus:outline-none text-xs w-24">
-                </div>
-                <div id="vaultStatus"
-                    class="hidden text-[10px] px-2 py-1 rounded-md bg-slate-800 border border-slate-700 text-slate-400">
-                    Checking...
-                </div>
                 <button onclick="purgeData()"
                     class="px-4 py-2 bg-red-900/20 hover:bg-red-900/40 text-red-400 rounded-lg border border-red-900/30 transition text-sm flex items-center gap-2" title="Delete all indexed data and logout">
                     <i data-lucide="trash-2" class="w-4 h-4"></i> Purge Data
@@ -228,10 +220,6 @@
                             <i data-lucide="library" class="w-5 h-5 text-purple-400"></i>
                             File Library
                         </h3>
-                        <button onclick="syncVault()"
-                            class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
-                            <i data-lucide="refresh-cw" class="w-3 h-3"></i> Sync
-                        </button>
                     </div>
                     <div id="fileLibrary" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-2">
                         <!-- Managed files -->
@@ -319,6 +307,7 @@
 
             </div>
         </div>
+    </main>
     </div>
     <!-- Preview Modal -->
     <div id="previewModal">
@@ -364,64 +353,7 @@
         let TOKEN = localStorage.getItem('repoir_token');
         let GOOGLE_CLIENT_ID = ""; // To be fetched from server
 
-        function setApiBase() {
-            const val = document.getElementById('apiBaseOverride').value;
-            if (val) {
-                localStorage.setItem('repoir_api_base', val.replace(/\/$/, ""));
-                location.reload();
-            }
-        }
-
-        // Update the display if it exists (on auth screen)
-        window.addEventListener('DOMContentLoaded', () => {
-            const display = document.getElementById('currentApiBase');
-            if (display) display.innerText = API_BASE;
-        });
-
         // --- Auth Logic ---
-        function checkUrlParams() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const code = urlParams.get('code');
-            if (code && TOKEN) {
-                const vaultPass = prompt("Set a Vault Secret for this Drive connection (Important for encryption):");
-                if (!vaultPass) return;
-
-                fetch(`${API_BASE}/v1/auth/gdrive/callback`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        code: code,
-                        redirect_uri: window.location.href.split('?')[0],
-                        vault_password: vaultPass
-                    })
-                }).then(res => res.json()).then(data => {
-                    if (data.status === 'connected') {
-                        alert("Google Drive Vault connected successfully!");
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                        refreshDashboard();
-                    }
-                });
-            }
-        }
-
-        async function connectDrive() {
-            if (!GOOGLE_CLIENT_ID) {
-                const cfg = await fetch(`${API_BASE}/v1/config`).then(r => r.json());
-                GOOGLE_CLIENT_ID = cfg.client_id;
-            }
-            if (!GOOGLE_CLIENT_ID) {
-                alert("Google Client ID not configured on server (.env)");
-                return;
-            }
-            const redirectURI = window.location.href.split('?')[0];
-            const scope = "https://www.googleapis.com/auth/drive.file";
-            const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectURI)}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
-            window.location.href = authUrl;
-        }
-
         async function handleGoogleResponse(response) {
             try {
                 const res = await fetch(`${API_BASE}/v1/auth/google`, {
@@ -453,6 +385,7 @@
                 const data = await res.json();
 
                 if (data.token) {
+                    localStorage.setItem('repoir_account_email', email);
                     processAuthSuccess(data);
                 } else {
                     alert(data.detail || "Authentication Failed");
@@ -470,6 +403,7 @@
 
         function logout() {
             localStorage.removeItem('repoir_token');
+            localStorage.removeItem('repoir_account_email');
             location.reload();
         }
 
@@ -537,44 +471,6 @@
             }
         }
 
-        async function syncVault() {
-            const vaultPass = document.getElementById('vaultPassword').value;
-            if (!vaultPass) {
-                alert("Please enter your Vault Secret to sync with GDrive.");
-                return;
-            }
-
-            const btn = event.currentTarget;
-            const originalHtml = btn ? btn.innerHTML : `<i data-lucide="refresh-cw" class="w-3 h-3"></i> Sync`;
-            if (btn) btn.innerHTML = `<i data-lucide="loader-2" class="w-3 h-3 animate-spin"></i> Syncing...`;
-            lucide.createIcons();
-
-            try {
-                const res = await fetch(`${API_BASE}/v1/vault/sync`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ password: vaultPass })
-                });
-                const data = await res.json();
-                if (res.ok && data.status === 'synced') {
-                    await refreshLibrary();
-                } else {
-                    const errorMsg = data.detail || "Check your Drive connection and Secret.";
-                    alert(`Sync failed: ${errorMsg}`);
-                }
-            } catch (err) {
-                alert("Network Error: Could not reach RepoIR Engine.");
-            } finally {
-                if (btn) {
-                    btn.innerHTML = originalHtml;
-                    lucide.createIcons();
-                }
-            }
-        }
-
         function renderLibrary(files) {
             const container = document.getElementById('fileLibrary');
             if (!files || !files.length) {
@@ -609,19 +505,14 @@
         }
 
         async function previewFile(objectId) {
-            const vaultPass = document.getElementById('vaultPassword').value;
-            if (!vaultPass) {
-                alert("Please enter your Vault Secret (top right) to view this file.");
-                return;
-            }
-
             try {
                 const res = await fetch(`${API_BASE}/v1/files`, { headers: { 'Authorization': `Bearer ${TOKEN}` } });
                 const { files } = await res.json();
                 const file = files.find(f => f.object_id === objectId);
                 if (!file) return;
 
-                const url = `${API_BASE}/v1/files/preview?object_id=${objectId}&password=${encodeURIComponent(vaultPass)}&token=${TOKEN}`;
+                const vaultKey = await getVaultKey();
+                const url = `${API_BASE}/v1/files/preview?object_id=${objectId}&password=${encodeURIComponent(vaultKey)}&token=${TOKEN}`;
 
                 // Set Header info
                 document.getElementById('previewTitle').innerText = file.source;
@@ -684,6 +575,17 @@
         }
 
         // --- Ingestion Logic ---
+        async function getVaultKey() {
+            const res = await fetch(`${API_BASE}/v1/vault/auto-key`, {
+                headers: { 'Authorization': `Bearer ${TOKEN}` }
+            });
+            const data = await res.json();
+            if (!res.ok || !data.vault_key) {
+                throw new Error(data.detail || 'Could not prepare the cloud vault.');
+            }
+            return data.vault_key;
+        }
+
         async function handleFileUpload() {
             const input = document.getElementById('fileInput');
             const files = input.files;
@@ -692,16 +594,13 @@
             const status = document.getElementById('uploadStatus');
             status.innerHTML = `<div class="p-3 bg-blue-500/20 text-blue-400 rounded-lg text-sm animate-pulse">Uploading ${files.length} files...</div>`;
 
-            const vaultPass = document.getElementById('vaultPassword').value;
-            const endpoint = vaultPass ? `${API_BASE}/v1/ingest/cloud` : `${API_BASE}/v1/ingest/local`;
+            const endpoint = `${API_BASE}/v1/ingest/cloud`;
 
             const formData = new FormData();
             for (let f of files) {
                 formData.append('files', f);
             }
-            if (vaultPass) {
-                formData.append('password', vaultPass);
-            }
+            formData.append('password', await getVaultKey());
 
             try {
                 const res = await fetch(endpoint, {
@@ -760,14 +659,10 @@
             const status = document.getElementById('uploadStatus');
             status.innerHTML = `<div class="p-3 bg-blue-500/20 text-blue-400 rounded-lg text-sm animate-pulse">Ingesting text snippet...</div>`;
 
-            const vaultPass = document.getElementById('vaultPassword').value;
-
             const formData = new FormData();
             formData.append('text', text);
             formData.append('filename', filename + ".txt"); // Ensure extension
-            if (vaultPass) {
-                formData.append('password', vaultPass);
-            }
+            formData.append('password', await getVaultKey());
 
             try {
                 const res = await fetch(`${API_BASE}/v1/ingest/text`, {
@@ -862,69 +757,28 @@
         }
 
         // --- UI State ---
+        function setConnectionState(connected) {
+            const hub = document.getElementById('hub-section');
+            const dot = document.getElementById('connection-dot');
+            const label = document.getElementById('connection-label');
+            const help = document.getElementById('account-help');
+            const email = localStorage.getItem('repoir_account_email');
+            dot.classList.toggle('connected', connected);
+            label.textContent = connected ? 'Connected' : 'Not connected';
+            label.className = connected ? 'text-emerald-300' : 'text-slate-400';
+            help.textContent = connected ? (email || `User ID: ${localStorage.getItem('repoir_uid')}`) : 'Sign in to unlock the tools in your workspace.';
+            hub.classList.toggle('hub-locked', !connected);
+        }
+
         function showAuth() {
             document.getElementById('auth-section').classList.remove('hidden');
-            document.getElementById('hub-section').classList.add('hidden');
+            setConnectionState(false);
         }
+
         function showHub() {
-            document.getElementById('auth-section').classList.add('hidden');
-            document.getElementById('hub-section').classList.remove('hidden');
+            document.getElementById('auth-section').classList.remove('hidden');
+            setConnectionState(true);
             document.getElementById('user-display-id').innerText = `Connected as User ID: ${localStorage.getItem('repoir_uid')}`;
-        }
-
-        async function updateVaultStatus() {
-            const vaultPass = document.getElementById('vaultPassword').value;
-            const vaultStatus = document.getElementById('vaultStatus');
-            const lockIcon = document.getElementById('lockIcon');
-
-            vaultStatus.classList.remove('hidden');
-            vaultStatus.className = 'text-[10px] px-2 py-1 rounded-md bg-slate-800 border text-slate-400';
-            lockIcon.className = 'w-4 h-4 text-slate-500'; // Reset icon color
-            vaultStatus.innerText = 'Checking...';
-
-            if (!vaultPass) {
-                vaultStatus.innerText = 'No Secret';
-                vaultStatus.classList.add('border-slate-700');
-                sessionStorage.removeItem('repoir_vault_pass');
-                return;
-            }
-
-            sessionStorage.setItem('repoir_vault_pass', vaultPass);
-
-            try {
-                const res = await fetch(`${API_BASE}/v1/vault/status`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${TOKEN}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ password: vaultPass })
-                });
-                const data = await res.json();
-
-                if (data.status === 'valid') {
-                    vaultStatus.innerText = 'Vault Ready';
-                    vaultStatus.className = 'text-[10px] px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-500';
-                    lockIcon.className = 'w-4 h-4 text-emerald-500';
-                } else if (data.status === 'not_connected') {
-                    vaultStatus.innerText = 'Drive Not Connected';
-                    vaultStatus.className = 'text-[10px] px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-500';
-                    lockIcon.className = 'w-4 h-4 text-amber-500';
-                } else if (data.status === 'locked') {
-                    vaultStatus.innerText = 'Vault Locked';
-                    vaultStatus.className = 'text-[10px] px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-blue-500';
-                    lockIcon.className = 'w-4 h-4 text-blue-500';
-                } else {
-                    vaultStatus.innerText = 'Invalid Secret';
-                    vaultStatus.className = 'text-[10px] px-2 py-1 rounded-md bg-red-500/10 border border-red-500/20 text-red-400';
-                    lockIcon.className = 'w-4 h-4 text-red-500';
-                }
-            } catch (err) {
-                console.error("Vault status check failed:", err);
-                vaultStatus.innerText = 'Error';
-                vaultStatus.classList.add('border-red-500', 'text-red-400');
-                lockIcon.className = 'w-4 h-4 text-red-500';
-            }
         }
 
         // Drag & Drop
@@ -968,14 +822,8 @@
                 console.error("Failed to fetch server config:", err);
             }
 
-            checkUrlParams();
-            const savedPass = sessionStorage.getItem('repoir_vault_pass');
-            if (savedPass) {
-                document.getElementById('vaultPassword').value = savedPass;
-            }
             if (TOKEN) {
                 refreshDashboard();
-                setTimeout(updateVaultStatus, 500);
             } else {
                 showAuth();
             }
@@ -986,4 +834,3 @@
 </body>
 
 </html>
-活跃

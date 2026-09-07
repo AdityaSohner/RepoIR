@@ -11,6 +11,7 @@ import {
   apiSignup,
   apiGoogleAuth,
   apiGetConfig,
+  apiAutoVaultKey,
   setToken,
   clearToken,
   AuthResponse,
@@ -102,11 +103,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionStorage.setItem('repoir_user', JSON.stringify(u));
   };
 
+  /** After any login, auto-fetch and store the deterministic vault key */
+  const autoStoreVaultKey = async () => {
+    try {
+      const { vault_key } = await apiAutoVaultKey();
+      sessionStorage.setItem('repoir_vault_password', vault_key);
+    } catch (e) {
+      console.warn('Could not auto-fetch vault key:', e);
+    }
+  };
+
   const login = useCallback(
     async (email: string, password: string): Promise<boolean> => {
       const res = await apiLogin(email, password);
       setToken(res.token);
       persistUser(hydrateUser(res, email));
+      await autoStoreVaultKey();
       return true;
     },
     []
@@ -117,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await apiSignup(email, password);
       setToken(res.token);
       persistUser(hydrateUser(res, email));
+      await autoStoreVaultKey();
       return true;
     },
     []
@@ -140,6 +153,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const u: User = { id: res.user_id, email, name, avatar: picture };
         persistUser(u);
+        // Auto-store vault key silently after Google login
+        await autoStoreVaultKey();
         window.dispatchEvent(new Event('google-login-success'));
       } catch (err) {
         console.error('Google Auth Failed:', err);

@@ -112,6 +112,59 @@ export async function apiGetConfig(): Promise<{ client_id: string }> {
   return apiFetch<{ client_id: string }>('/v1/config');
 }
 
+/** Fetch an auto-derived vault key for this user — no manual password needed. */
+export async function apiAutoVaultKey(): Promise<{ vault_key: string }> {
+  return apiFetch<{ vault_key: string }>('/v1/vault/auto-key');
+}
+
+export interface StorageStatusResponse {
+  connected: boolean;
+  provider: 'google_drive' | 'dropbox' | 'onedrive' | null;
+  status: string;
+  provider_account_id: string | null;
+  connected_at: string | null;
+}
+
+export interface StorageProviderItem {
+  id: string;
+  name: string;
+  supported: boolean;
+}
+
+export async function apiGetStorageProviders(): Promise<{ providers: StorageProviderItem[] }> {
+  return apiFetch<{ providers: StorageProviderItem[] }>('/v1/storage/providers');
+}
+
+export async function apiGetStorageStatus(): Promise<StorageStatusResponse> {
+  return apiFetch<StorageStatusResponse>('/v1/storage/status');
+}
+
+export async function apiDisconnectStorage(provider?: string): Promise<{ status: string }> {
+  const query = provider ? `?provider=${encodeURIComponent(provider)}` : '';
+  return apiFetch<{ status: string }>(`/v1/storage/disconnect${query}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function apiDropboxConnect(redirect_uri?: string): Promise<{ auth_url: string; state: string }> {
+  const query = redirect_uri ? `?redirect_uri=${encodeURIComponent(redirect_uri)}` : '';
+  return apiFetch<{ auth_url: string; state: string }>(`/v1/storage/dropbox/connect${query}`);
+}
+
+export async function apiOneDriveConnect(redirect_uri?: string): Promise<{ auth_url: string; state: string }> {
+  const query = redirect_uri ? `?redirect_uri=${encodeURIComponent(redirect_uri)}` : '';
+  return apiFetch<{ auth_url: string; state: string }>(`/v1/storage/onedrive/connect${query}`);
+}
+
+export async function apiOAuthLogin(provider: string, code: string, redirect_uri: string): Promise<AuthResponse> {
+  return apiFetch<AuthResponse>('/v1/auth/oauth-login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider, code, redirect_uri }),
+  });
+}
+
+
 // ============================================================
 // 2. Google Drive Vault
 // ============================================================
@@ -128,7 +181,7 @@ export interface VaultSyncResponse {
 export async function apiGDriveCallback(
   code: string,
   redirect_uri: string,
-  vault_password: string
+  vault_password?: string
 ): Promise<{ status: string }> {
   return apiFetch('/v1/auth/gdrive/callback', {
     method: 'POST',
@@ -223,11 +276,14 @@ export interface RepoFile {
   source: string;
   type: 'document' | 'image' | 'text' | 'url' | 'audio';
   file_type: string;
-  file_path: string; // Google Drive File ID
+  file_path: string;
   chunk_count: number;
   file_size: number;
   thumbnail_url?: string;
   icon_url?: string;
+  provider?: 'google_drive' | 'dropbox' | 'onedrive' | null;
+  web_url?: string | null; // direct cloud provider file view URL
+  is_deleted?: boolean | number;
 }
 
 export interface FilesResponse {
@@ -236,6 +292,32 @@ export interface FilesResponse {
 
 export async function apiGetFiles(): Promise<FilesResponse> {
   return apiFetch<FilesResponse>('/v1/files');
+}
+
+export async function apiDeleteFile(objectId: string): Promise<{ status: string; object_id: string }> {
+  return apiFetch<{ status: string; object_id: string }>(`/v1/vault/objects/${encodeURIComponent(objectId)}`, {
+    method: 'DELETE',
+  });
+}
+
+export interface UserSearchResult {
+  user_id: string;
+  email: string;
+}
+
+export async function apiSearchUsers(query: string): Promise<UserSearchResult[]> {
+  return apiFetch<UserSearchResult[]>(`/v1/users/search?q=${encodeURIComponent(query)}`);
+}
+
+export async function apiShareFile(
+  objectId: string,
+  recipientEmail: string
+): Promise<{ status: string; object_id: string; recipient_email: string }> {
+  return apiFetch('/v1/files/share', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ object_id: objectId, recipient_email: recipientEmail }),
+  });
 }
 
 export interface SearchResponse {

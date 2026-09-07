@@ -21,6 +21,26 @@ interface FilePreviewModalProps {
 const OFFICE_TYPES = ['.docx', '.pptx', '.xlsx', '.doc', '.ppt', '.xls'];
 const IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'];
 
+// Map provider id → display label and cloud view URL builder
+const PROVIDER_META: Record<string, { label: string; getUrl: (fileId: string) => string }> = {
+  google_drive: {
+    label: 'Drive',
+    getUrl: (fileId) => `https://drive.google.com/file/d/${fileId}/view`,
+  },
+  dropbox: {
+    label: 'Dropbox',
+    getUrl: (filePath) => {
+      const fname = filePath ? filePath.split('/').pop()?.split('\\').pop() : '';
+      if (!fname) return 'https://www.dropbox.com/home/Apps/RepoIR_Vault';
+      return `https://www.dropbox.com/preview/Apps/RepoIR_Vault/RepoIR_Vault/${fname}?role=personal`;
+    },
+  },
+  onedrive: {
+    label: 'OneDrive',
+    getUrl: () => 'https://onedrive.live.com',
+  },
+};
+
 export default function FilePreviewModal({
   file,
   onClose,
@@ -37,20 +57,30 @@ export default function FilePreviewModal({
   const isText = file?.type === 'text';
   const isUrl = file?.type === 'url';
   const isAudio = file ? (file.type === 'audio' || ['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.webm'].includes(fileType)) : false;
-  const hasGDrivePath = Boolean(file?.file_path);
+  const hasCloudPath = Boolean(file?.file_path);
+
+  // Provider-aware helpers
+  const provider = file?.provider || 'google_drive'; // fallback for legacy files
+  const providerMeta = PROVIDER_META[provider] || PROVIDER_META['google_drive'];
+  const isGDrive = provider === 'google_drive';
 
   const previewUrl = file ? getPreviewUrl(file.object_id, vaultPassword) : '';
-  const driveEmbedUrl = hasGDrivePath && file
+  // Only use GDrive embed for Office docs stored in GDrive
+  const driveEmbedUrl = isGDrive && hasCloudPath && file
     ? `https://drive.google.com/file/d/${file.file_path}/preview`
     : null;
 
-  const openInDrive = () => {
-    if (file?.file_path) {
-      window.open(
-        `https://drive.google.com/file/d/${file.file_path}/view`,
-        '_blank'
-      );
+  const openInCloud = () => {
+    if (!file) return;
+    if (provider === 'dropbox') {
+      const fname = (file.file_path || file.source || '').split('/').pop()?.split('\\').pop();
+      if (fname) {
+        window.open(`https://www.dropbox.com/preview/Apps/RepoIR_Vault/RepoIR_Vault/${fname}?role=personal`, '_blank');
+        return;
+      }
     }
+    const target = file.web_url || (file.file_path ? providerMeta.getUrl(file.file_path) : null);
+    if (target) window.open(target, '_blank');
   };
 
   useEffect(() => {
@@ -120,30 +150,67 @@ export default function FilePreviewModal({
             />
           </div>
 
-          {hasGDrivePath && (
+          {hasCloudPath && (
             <button
-              onClick={openInDrive}
+              onClick={openInCloud}
               className="px-6 py-2.5 rounded-xl border border-border hover:bg-muted font-medium transition-all flex items-center gap-2 text-sm text-muted-foreground"
             >
               <HiOutlineExternalLink className="w-4 h-4" />
-              Open original file
+              Open in {providerMeta.label}
             </button>
           )}
         </div>
       );
     }
 
-    // ─ PDFs & Office ──────────────────────────────────────────
-    if (isPDF || isOffice) {
-      const sourceUrl = isOffice && driveEmbedUrl ? driveEmbedUrl : previewUrl;
+    // ─ PDFs ──────────────────────────────────────────────────
+    if (isPDF) {
       return (
         <div className="h-[75vh] w-full rounded-xl overflow-hidden border border-border shadow-inner bg-card">
           <iframe
-            src={sourceUrl}
+            src={previewUrl}
             title={file.source}
             className="w-full h-full border-none"
             allow="autoplay; encrypted-media"
           />
+        </div>
+      );
+    }
+
+    // ─ Office Documents ──────────────────────────────────────
+    if (isOffice) {
+      if (driveEmbedUrl) {
+        return (
+          <div className="h-[75vh] w-full rounded-xl overflow-hidden border border-border shadow-inner bg-card">
+            <iframe
+              src={driveEmbedUrl}
+              title={file.source}
+              className="w-full h-full border-none"
+              allow="autoplay; encrypted-media"
+            />
+          </div>
+        );
+      }
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] bg-muted/20 rounded-2xl border border-dashed border-border p-8 text-center animate-in slide-in-from-bottom-4">
+          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+            <HiOutlineDocument className="w-10 h-10 text-primary" />
+          </div>
+          <h3 className="text-xl font-bold text-foreground mb-2 truncate max-w-lg">{file.source}</h3>
+          <p className="text-muted-foreground max-w-sm mx-auto mb-8">
+            Office documents on {providerMeta.label} can be previewed directly on {providerMeta.label}.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {hasCloudPath && (
+              <button
+                onClick={openInCloud}
+                className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-all flex items-center gap-2"
+              >
+                <HiOutlineExternalLink className="w-5 h-5" />
+                View in {providerMeta.label}
+              </button>
+            )}
+          </div>
         </div>
       );
     }
@@ -192,13 +259,13 @@ export default function FilePreviewModal({
           This file format ({fileType.toUpperCase() || 'UNKNOWN'}) is securely stored.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
-          {hasGDrivePath && (
+          {hasCloudPath && (
             <button
-              onClick={openInDrive}
+              onClick={openInCloud}
               className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-all flex items-center gap-2"
             >
               <HiOutlineExternalLink className="w-5 h-5" />
-              View in Google Drive
+              View in {providerMeta.label}
             </button>
           )}
         </div>
@@ -256,14 +323,14 @@ export default function FilePreviewModal({
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              {hasGDrivePath && (
+              {hasCloudPath && (
                 <button
-                  onClick={openInDrive}
+                  onClick={openInCloud}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border hover:bg-muted transition-colors text-sm text-muted-foreground"
-                  title="Open in Google Drive"
+                  title={`Open in ${providerMeta.label}`}
                 >
                   <HiOutlineExternalLink className="w-4 h-4" />
-                  <span className="hidden sm:inline">Drive</span>
+                  <span className="hidden sm:inline">{providerMeta.label}</span>
                 </button>
               )}
               <button

@@ -1,3 +1,13 @@
+---
+title: RepoIR
+emoji: 📁
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # RepoIR: Privacy-First AI Search Gateway
 
 An advanced, privacy-first AI search engine designed to index and retrieve information from a variety of personal data sources (documents, images, URLs) while maintaining a secure "Cloud Vault" on Google Drive.

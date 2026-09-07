@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     poppler-utils \
     build-essential \
+    ffmpeg \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory in the container
@@ -31,11 +32,15 @@ COPY . .
 # Create data directory and set permissions for non-root user
 RUN mkdir -p /app/data && chmod -R 777 /app/data
 
-# (Optional) Add a non-root user for Hugging Face Spaces compatibility
+# Add a non-root user for Hugging Face Spaces compatibility
 RUN useradd -m -u 1000 user
 USER user
 ENV HOME=/home/user \
     PATH=/home/user/.local/bin:$PATH
+
+# Pre-download models to cache inside the image
+RUN python -c "import whisper; whisper.load_model('base')"
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 
 # Expose the port the app runs on
 EXPOSE 7860

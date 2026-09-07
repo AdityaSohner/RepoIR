@@ -79,7 +79,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return (localStorage.getItem('repoir_theme') as 'light' | 'dark') || 'dark';
   });
 
-  // Vault password stored ONLY in sessionStorage (transient)
+  // Vault password is auto-derived by the server and stored after login.
+  // It is NEVER manually entered by the user.
   const [vaultPassword, _setVaultPasswordState] = useState<string>(() => {
     return sessionStorage.getItem('repoir_vault_password') || '';
   });

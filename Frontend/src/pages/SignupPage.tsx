@@ -8,8 +8,10 @@ import {
   HiOutlineEyeOff,
   HiOutlineUser,
 } from 'react-icons/hi';
+import { FaDropbox, FaMicrosoft } from 'react-icons/fa';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
+import { apiGetStorageStatus } from '@/lib/api';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -19,18 +21,24 @@ export default function SignupPage() {
   const [error, setError] = useState('');
 
   const { signup, loginWithGoogle, user } = useAuth();
-  const { refreshFiles, refreshStats, refreshActivity, vaultPassword } = useApp();
+  const { refreshFiles, refreshStats, refreshActivity } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
-      if (!vaultPassword) {
-        navigate('/settings', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      apiGetStorageStatus()
+        .then((status) => {
+          if (status.connected) {
+            navigate('/dashboard', { replace: true });
+          } else {
+            navigate('/onboarding', { replace: true });
+          }
+        })
+        .catch(() => {
+          navigate('/onboarding', { replace: true });
+        });
     }
-  }, [user, vaultPassword, navigate]);
+  }, [user, navigate]);
 
   const afterSignup = useCallback(async () => {
     refreshFiles();
@@ -206,6 +214,23 @@ export default function SignupPage() {
           </div>
 
           <div id="google-signup-btn" className="w-full flex justify-center py-2 min-h-[40px]"></div>
+
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <button
+              type="button"
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-background/60 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <FaDropbox className="w-4 h-4 text-[#0061FF]" />
+              Dropbox
+            </button>
+            <button
+              type="button"
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-background/60 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <FaMicrosoft className="w-4 h-4 text-[#5E5E5E]" />
+              OneDrive
+            </button>
+          </div>
 
           <p className="text-center text-muted-foreground mt-6 text-sm">
             Already have an account?{' '}

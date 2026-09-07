@@ -7,8 +7,10 @@ import {
   HiOutlineEye,
   HiOutlineEyeOff,
 } from 'react-icons/hi';
+import { FaDropbox, FaMicrosoft } from 'react-icons/fa';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
+import { clearToken, apiGetStorageStatus } from '@/lib/api';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -18,18 +20,24 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   const { login, loginWithGoogle, user } = useAuth();
-  const { refreshFiles, refreshStats, refreshActivity, vaultPassword } = useApp();
+  const { refreshFiles, refreshStats, refreshActivity } = useApp();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
-      if (!vaultPassword) {
-        navigate('/settings', { replace: true });
-      } else {
-        navigate('/dashboard', { replace: true });
-      }
+      apiGetStorageStatus()
+        .then((status) => {
+          if (status.connected) {
+            navigate('/dashboard', { replace: true });
+          } else {
+            navigate('/onboarding', { replace: true });
+          }
+        })
+        .catch(() => {
+          navigate('/dashboard', { replace: true });
+        });
     }
-  }, [user, vaultPassword, navigate]);
+  }, [user, navigate]);
 
   const afterLogin = useCallback(async () => {
     refreshFiles();
@@ -38,11 +46,19 @@ export default function LoginPage() {
   }, [refreshFiles, refreshStats, refreshActivity]);
 
   useEffect(() => {
-    // Initialize Google button container using the same settings as RepoIR hub
+    // Clear any stale JWT before Google sign-in to avoid 401s from expired tokens
+    clearToken();
     loginWithGoogle('google-signin-btn');
 
-    const handleSuccess = () => afterLogin();
-    const handleError = (e: any) => setError(e.detail?.message || 'Google Auth Failed');
+    const handleSuccess = () => {
+      // Google OAuth always auto-connects storage — go straight to dashboard
+      afterLogin();
+      navigate('/dashboard', { replace: true });
+    };
+    const handleError = (e: any) => {
+      const msg = e.detail?.message || e.detail?.detail || String(e.detail) || 'Google Sign-In failed. Please try again.';
+      setError(msg);
+    };
 
     window.addEventListener('google-login-success', handleSuccess);
     window.addEventListener('google-login-error', handleError);
@@ -51,7 +67,7 @@ export default function LoginPage() {
       window.removeEventListener('google-login-success', handleSuccess);
       window.removeEventListener('google-login-error', handleError);
     };
-  }, [loginWithGoogle, afterLogin]);
+  }, [loginWithGoogle, afterLogin, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,6 +210,23 @@ export default function LoginPage() {
 
           {/* This container will be populated by google.accounts.id.renderButton matching RepoIR hub's exact parameters */}
           <div id="google-signin-btn" className="w-full flex justify-center py-2 h-[50px]"></div>
+
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <button
+              type="button"
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-background/60 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <FaDropbox className="w-4 h-4 text-[#0061FF]" />
+              Dropbox
+            </button>
+            <button
+              type="button"
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-border bg-background/60 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <FaMicrosoft className="w-4 h-4 text-[#5E5E5E]" />
+              OneDrive
+            </button>
+          </div>
 
           <p className="text-center text-muted-foreground mt-6 text-sm">
             Don't have an account?{' '}

@@ -1,9 +1,10 @@
 import faiss
 import numpy as np
 from pathlib import Path
+from app.config import DATA_DIR
 
 DIM = 384
-FAISS_PATH = Path("data/faiss.index")
+FAISS_PATH = DATA_DIR / "faiss.index"
 
 
 class FAISSStore:
@@ -13,7 +14,7 @@ class FAISSStore:
     """
 
     def __init__(self, user_id: str = "default"):
-        self.user_dir = Path(f"data/users/{user_id}")
+        self.user_dir = DATA_DIR / "users" / user_id
         self.index_path = self.user_dir / "faiss.index"
         self.index = self._load()
 

@@ -6,6 +6,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from app.storage.encryption_manager import EncryptionManager
+from app.config import DATA_DIR
 import json
 
 # ── Setup ─────────────────────────────────────────────────────────────────────
@@ -20,7 +21,9 @@ class GDriveManager:
     def __init__(self, user_id: str = "default", user_password: str = None):
         self.user_id = user_id
         self.user_password = user_password
-        self.token_path = f"data/users/{user_id}/token.json.enc"
+        self.user_dir = DATA_DIR / "users" / user_id
+        self.user_dir.mkdir(parents=True, exist_ok=True)
+        self.token_path = str(self.user_dir / "token.json.enc")
         
         # Load from .env
         self.client_id = os.getenv("GOOGLE_CLIENT_ID")
@@ -33,20 +36,36 @@ class GDriveManager:
             print(f"DEBUG: No token file found for user {self.user_id} at {self.token_path}")
             return None
             
-        if not self.user_password:
-            print(f"DEBUG: No password provided for user {self.user_id}")
-            return None
-            
         try:
-            # Decrypt token.json
-            encryptor = EncryptionManager(user_password=self.user_password)
             with open(self.token_path, 'rb') as f:
                 encrypted_data = f.read()
-            
+
             print(f"DEBUG: Data loaded from {self.token_path}, size={len(encrypted_data)}. Decrypting...")
-            decrypted_data = encryptor.decrypt_stream(encrypted_data)
+
+            keys_to_try = []
+            if self.user_password:
+                keys_to_try.append(self.user_password)
+            if self.user_id not in keys_to_try:
+                keys_to_try.append(self.user_id)
+
+            decrypted_data = None
+            for key in keys_to_try:
+                try:
+                    encryptor = EncryptionManager(key_or_user_id=key)
+                    decrypted_data = encryptor.decrypt_stream(encrypted_data)
+                    break
+                except Exception:
+                    continue
+
+            if not decrypted_data:
+                print(f"[INFO] Stale or mismatched encryption key for token file of user {self.user_id} — removing token file to allow re-auth.")
+                try:
+                    os.remove(self.token_path)
+                except OSError:
+                    pass
+                return None
+
             token_data = json.loads(decrypted_data.decode())
-            
             creds = Credentials.from_authorized_user_info(token_data, SCOPES)
             
             if creds and creds.expired and creds.refresh_token:
@@ -56,18 +75,23 @@ class GDriveManager:
                 
             return build('drive', 'v3', credentials=creds)
         except Exception as e:
-            import traceback
-            print(f"GDrive Auth Error for user {self.user_id}: {str(e)}")
-            traceback.print_exc()
+            err_str = str(e).lower()
+            err_type = type(e).__name__.lower()
+            if 'invalidtoken' in err_type or 'invalid' in err_str or 'signature' in err_str or 'token' in err_str:
+                print(f"[INFO] Stale/mismatched token for user {self.user_id} — removing to allow re-auth.")
+                try:
+                    os.remove(self.token_path)
+                except OSError:
+                    pass
+            else:
+                import traceback
+                print(f"GDrive Auth Error for user {self.user_id}: {str(e)}")
+                traceback.print_exc()
             return None
 
     def save_credentials(self, creds):
-        """Encrypts and saves the GDrive credentials safely."""
-        if not self.user_password:
-            print("ERROR: Cannot save credentials without a password set.")
-            return
-            
-        encryptor = EncryptionManager(user_password=self.user_password)
+        """Encrypts and saves the GDrive credentials safely using server-managed encryption key."""
+        encryptor = EncryptionManager(key_or_user_id=self.user_password or self.user_id)
         token_json = creds.to_json()
         encrypted_token = encryptor.encrypt_stream(token_json.encode())
         
@@ -75,6 +99,7 @@ class GDriveManager:
         with open(self.token_path, 'wb') as f:
             f.write(encrypted_token)
         print(f"SUCCESS: Token encrypted and saved to {self.token_path}")
+
 
     def build_service_from_code(self, code: str, redirect_uri: str):
         """Exchanges an auth code from frontend for a real token."""

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
-import { HiOutlineExclamation, HiOutlineCog, HiOutlineSearch } from 'react-icons/hi';
+import { motion } from 'framer-motion';
+import { useSearchParams, Navigate } from 'react-router-dom';
+import { HiOutlineSearch } from 'react-icons/hi';
 import { useAuth } from '@/contexts/AuthContext';
 import { useApp } from '@/contexts/AppContext';
 import StatsCards from '@/components/StatsCards';
@@ -12,7 +12,6 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const { vaultStatus, recheckVaultStatus, vaultPassword, refreshStats, refreshActivity, setImmersiveSearchOpen } =
     useApp();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const getGreeting = () => {
@@ -30,21 +29,13 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const showVaultAlert =
+  const showVaultBanner =
     vaultStatus === 'not_connected' ||
-    vaultStatus === 'unknown' ||
     vaultStatus === 'invalid' ||
     vaultStatus === 'locked';
 
-  useEffect(() => {
-    if (showVaultAlert) {
-      navigate('/settings', { replace: true });
-    }
-  }, [showVaultAlert, navigate]);
-
-  if (showVaultAlert) {
-    return null;
-  }
+  // NOTE: We intentionally do NOT redirect to /settings for vault issues.
+  // The vault is for Drive uploads only; users should always access the dashboard.
 
   const activeType = searchParams.get('type');
   const isHome = !activeType || activeType === 'all';

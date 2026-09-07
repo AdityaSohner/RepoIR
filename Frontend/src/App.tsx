@@ -9,8 +9,11 @@ import { useEffect } from "react";
 
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
+import OnboardingPage from "./pages/OnboardingPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import OAuthCallbackPage from "./pages/OAuthCallbackPage";
+import DropboxOAuthCallbackPage from "./pages/DropboxOAuthCallbackPage";
+import OneDriveOAuthCallbackPage from "./pages/OneDriveOAuthCallbackPage";
 import DashboardLayout from "./components/DashboardLayout";
 import DashboardPage from "./pages/DashboardPage";
 import ProfilePage from "./pages/ProfilePage";
@@ -28,7 +31,8 @@ function ThemeManager() {
     const isDashboardArea = 
       location.pathname.startsWith('/dashboard') || 
       location.pathname.startsWith('/profile') || 
-      location.pathname.startsWith('/settings');
+      location.pathname.startsWith('/settings') ||
+      location.pathname.startsWith('/onboarding');
 
     // Force light theme on non-dashboard pages
     const effectiveTheme = isDashboardArea ? theme : 'light';
@@ -57,10 +61,14 @@ const App = () => (
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
+              <Route path="/onboarding" element={<OnboardingPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-              {/* Google Drive OAuth callback — opened in popup, no auth needed */}
+              {/* OAuth callbacks */}
               <Route path="/auth/callback" element={<OAuthCallbackPage />} />
+              <Route path="/storage/dropbox/callback" element={<DropboxOAuthCallbackPage />} />
+              <Route path="/storage/onedrive/callback" element={<OneDriveOAuthCallbackPage />} />
+              <Route path="/v1/storage/onedrive/callback" element={<OneDriveOAuthCallbackPage />} />
 
               {/* Protected Routes */}
               <Route element={<DashboardLayout />}>

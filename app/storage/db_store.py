@@ -1,7 +1,8 @@
 import sqlite3
 from pathlib import Path
+from app.config import DATA_DIR
 
-DB_PATH = Path("data/repoir.db")
+DB_PATH = DATA_DIR / "repoir.db"
 
 
 class DBStore:
@@ -13,8 +14,8 @@ class DBStore:
     """
     
     def __init__(self, user_id: str = "default"):
-        # Create a private folder for each user
-        self.user_dir = Path(f"data/users/{user_id}")
+        # Create a private folder for each user inside persistent DATA_DIR
+        self.user_dir = DATA_DIR / "users" / user_id
         self.user_dir.mkdir(parents=True, exist_ok=True)
         self.db_path = self.user_dir / "repoir.db"
         
@@ -92,6 +93,9 @@ class DBStore:
         # --- Migrations: safely add new columns to existing DBs ---
         migrations = [
             "ALTER TABLE objects ADD COLUMN icon_url TEXT",
+            "ALTER TABLE objects ADD COLUMN provider TEXT",
+            "ALTER TABLE objects ADD COLUMN web_url TEXT",  # direct cloud file view URL
+            "ALTER TABLE objects ADD COLUMN is_deleted INTEGER DEFAULT 0", # Soft-delete flag
         ]
         for migration in migrations:
             try:
@@ -100,26 +104,41 @@ class DBStore:
             except Exception:
                 pass  # Column already exists — safe to ignore
 
+        # Fix/normalize Dropbox web_url entries for existing files
+        try:
+            cur = self.conn.execute("SELECT object_id, file_path, source FROM objects WHERE provider = 'dropbox'")
+            rows = cur.fetchall()
+            for r in rows:
+                obj_id = r["object_id"]
+                file_path = r["file_path"] or r["source"] or ""
+                filename = file_path.split("/")[-1].split("\\")[-1]
+                if filename:
+                    new_url = f"https://www.dropbox.com/preview/Apps/RepoIR_Vault/RepoIR_Vault/{filename}?role=personal"
+                    self.conn.execute("UPDATE objects SET web_url = ? WHERE object_id = ?", (new_url, obj_id))
+            self.conn.commit()
+        except Exception as e:
+            print(f"Dropbox migration notice: {e}")
+
     # ── Object (file) operations ───────────────────────────────────────────
 
     def store_object(self, object_id: str, user_id: str, source: str,
                      type_: str, file_type: str, file_path: str | None,
                      chunk_count: int, file_size: int = 0, thumbnail_url: str = None, icon_url: str = None):
         self.conn.execute(
-            "INSERT OR REPLACE INTO objects (object_id, user_id, source, type, file_type, file_path, chunk_count, file_size, thumbnail_url, icon_url) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            "INSERT OR REPLACE INTO objects (object_id, user_id, source, type, file_type, file_path, chunk_count, file_size, thumbnail_url, icon_url, is_deleted) VALUES (?,?,?,?,?,?,?,?,?,?,0)",
             (object_id, user_id, source, type_, file_type, file_path, chunk_count, file_size, thumbnail_url, icon_url)
         )
         self.conn.commit()
 
     def get_objects_by_ids(self, object_ids: list[str]) -> list[dict]:
-        """Fetch file metadata for a list of object_ids. Deduplicates automatically."""
+        """Fetch file metadata for a list of object_ids. Deduplicates automatically and excludes soft-deleted files."""
         seen = set()
         results = []
         for oid in object_ids:
             if oid in seen:
                 continue
             row = self.conn.execute(
-                "SELECT * FROM objects WHERE object_id = ?", (oid,)
+                "SELECT * FROM objects WHERE object_id = ? AND (is_deleted = 0 OR is_deleted IS NULL)", (oid,)
             ).fetchone()
             if row:
                 results.append(dict(row))
@@ -243,16 +262,16 @@ class DBStore:
         # ── Category & Listing Operations ─────────────────────────────────
 
     def list_all_objects(self, category_id: str | None = None) -> list[dict]:
-        """List all objects, optionally filtered by category."""
+        """List all non-deleted objects, optionally filtered by category."""
         if category_id:
             query = """
                 SELECT o.* FROM objects o
                 JOIN category_mappings m ON o.object_id = m.object_id
-                WHERE m.category_id = ?
+                WHERE m.category_id = ? AND (o.is_deleted = 0 OR o.is_deleted IS NULL)
             """
             rows = self.conn.execute(query, (category_id,)).fetchall()
         else:
-            rows = self.conn.execute("SELECT * FROM objects").fetchall()
+            rows = self.conn.execute("SELECT * FROM objects WHERE (is_deleted = 0 OR is_deleted IS NULL)").fetchall()
         return [dict(r) for r in rows]
 
     def create_category(self, category_id: str, name: str, description: str):
@@ -274,6 +293,11 @@ class DBStore:
         )
         self.conn.commit()
 
+    def soft_delete_object(self, object_id: str):
+        """Marks an object as soft-deleted (hidden from application). Preserves embeddings in FAISS/FTS5."""
+        self.conn.execute("UPDATE objects SET is_deleted = 1 WHERE object_id = ?", (object_id,))
+        self.conn.commit()
+
     def delete_object(self, object_id: str):
         """Cleanly remove an object and all its associated data."""
         self.conn.execute("DELETE FROM objects WHERE object_id = ?", (object_id,))
@@ -291,11 +315,11 @@ class DBStore:
         )
         self.conn.commit()
 
-    def update_object_cloud_info(self, object_id: str, file_path: str, thumbnail_url: str = None, icon_url: str = None):
-        """Atomically links a GDrive file ID and thumbnail to an existing object."""
+    def update_object_cloud_info(self, object_id: str, file_path: str, thumbnail_url: str = None, icon_url: str = None, provider: str = None, web_url: str = None):
+        """Atomically links a cloud file ID, thumbnail, provider, and web view URL to an existing object."""
         self.conn.execute(
-            "UPDATE objects SET file_path = ?, thumbnail_url = ?, icon_url = ? WHERE object_id = ?",
-            (file_path, thumbnail_url, icon_url, object_id)
+            "UPDATE objects SET file_path = ?, thumbnail_url = ?, icon_url = ?, provider = ?, web_url = ? WHERE object_id = ?",
+            (file_path, thumbnail_url, icon_url, provider, web_url, object_id)
         )
         self.conn.commit()
 
@@ -324,10 +348,11 @@ class DBStore:
         return [dict(r) for r in rows]
 
     def get_storage_stats(self) -> dict:
-        """Calculates total files and storage size grouped by type."""
+        """Calculates total files and storage size grouped by type (excluding soft-deleted files)."""
         query = """
             SELECT type, COUNT(*) as count, SUM(file_size) as size 
             FROM objects 
+            WHERE (is_deleted = 0 OR is_deleted IS NULL)
             GROUP BY type
         """
         rows = self.conn.execute(query).fetchall()

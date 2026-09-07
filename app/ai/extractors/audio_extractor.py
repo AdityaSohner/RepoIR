@@ -153,7 +153,7 @@ class AudioExtractor:
         # no transcript is silently dropped — no empty vectors stored.
         if not transcript_text and label != "vocals":
             raise NoSpeechError(
-                f"Audio '{original_name or extension}' classified as '{label}' "
+                f"Audio '{extension}' classified as '{label}' "
                 "with no speech transcript — not indexed."
             )
 

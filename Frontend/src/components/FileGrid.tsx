@@ -3,18 +3,35 @@ import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiOutlineViewGrid, HiOutlineViewList, HiOutlineRefresh } from 'react-icons/hi';
 import { useApp } from '@/contexts/AppContext';
-import { RepoFile } from '@/lib/api';
+import { RepoFile, apiDeleteFile } from '@/lib/api';
 import FileCard from './FileCard';
 import FilePreviewModal from './FilePreviewModal';
+import ShareModal from './ShareModal';
 
 export default function FileGrid() {
   const { files, filesLoading, refreshFiles, addNotification } = useApp();
   const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [previewFile, setPreviewFile] = useState<RepoFile | null>(null);
+  const [shareFile, setShareFile] = useState<RepoFile | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>(searchParams.get('type') || 'all');
   const [extFilter, setExtFilter] = useState<string>('all');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDeleteFile = async (file: RepoFile) => {
+    try {
+      await apiDeleteFile(file.object_id);
+      addNotification({ type: 'info', message: `${file.source} deleted successfully.` });
+      refreshFiles();
+    } catch (err) {
+      addNotification({ type: 'error', message: `Failed to delete ${file.source}` });
+    }
+  };
+
+  const handleShared = (email: string) => {
+    setShareFile(null);
+    addNotification(`File shared with ${email}.`, 'success');
+  };
 
   // Sync with URL params
   useEffect(() => {
@@ -188,6 +205,8 @@ export default function FileGrid() {
                   index={index}
                   view={view}
                   onPreview={() => setPreviewFile(file)}
+                  onDelete={handleDeleteFile}
+                  onShare={setShareFile}
                 />
               ))}
             </motion.div>
@@ -209,6 +228,7 @@ export default function FileGrid() {
         file={previewFile}
         onClose={() => setPreviewFile(null)}
       />
+      {shareFile && <ShareModal file={shareFile} onClose={() => setShareFile(null)} onShared={handleShared} />}
     </div>
   );
 }

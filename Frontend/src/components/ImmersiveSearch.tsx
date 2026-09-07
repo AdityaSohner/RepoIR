@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HiOutlineSearch, HiOutlineX } from 'react-icons/hi';
 import { useApp } from '@/contexts/AppContext';
-import { RepoFile, apiSearch } from '@/lib/api';
+import { RepoFile, apiSearch, apiDeleteFile } from '@/lib/api';
 import FileCard from './FileCard';
 import FilePreviewModal from './FilePreviewModal';
 
@@ -14,6 +14,16 @@ export default function ImmersiveSearch() {
     const [previewFile, setPreviewFile] = useState<RepoFile | null>(null);
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const handleDeleteFile = async (file: RepoFile) => {
+        try {
+            await apiDeleteFile(file.object_id);
+            addNotification({ type: 'info', message: `${file.source} deleted successfully.` });
+            setSearchResults((prev) => prev ? prev.filter((f) => f.object_id !== file.object_id) : null);
+        } catch (err) {
+            addNotification({ type: 'error', message: `Failed to delete ${file.source}` });
+        }
+    };
 
     // Reset when closed
     useEffect(() => {
@@ -124,6 +134,7 @@ export default function ImmersiveSearch() {
                                             file={file}
                                             index={index}
                                             onPreview={() => setPreviewFile(file)}
+                                            onDelete={handleDeleteFile}
                                         />
                                     ))}
                                 </motion.div>

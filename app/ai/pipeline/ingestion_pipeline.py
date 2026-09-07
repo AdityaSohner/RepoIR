@@ -3,6 +3,7 @@ from app.ai.extractors.img_extractor import ImageExtractor
 from app.ai.extractors.url_extractor import LinkExtractor
 from app.ai.extractors.vision_describer import VisionDescriber
 from app.ai.extractors.audio_extractor import AudioExtractor, NoSpeechError
+from app.ai.extractors.video_extractor import VideoExtractor
 from app.ai.chunker.text_chunker import TextChunker
 from app.ai.embeddings.text_embedder import TextEmbedder
 from app.storage.id_generator import generate_object_id
@@ -43,6 +44,8 @@ class IngestionPipeline:
             extractor = LinkExtractor()
         elif source_type == "audio":
             extractor = AudioExtractor()
+        elif source_type == "video":
+            extractor = VideoExtractor()
         else:
             raise ValueError(f"Unsupported source type: {source_type}")
 
