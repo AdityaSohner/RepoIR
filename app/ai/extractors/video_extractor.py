@@ -7,6 +7,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -16,6 +17,25 @@ from PIL import Image
 
 from app.ai.extractors.audio_extractor import _get_whisper_model
 from app.ai.extractors.vision_describer import VisionDescriber
+
+
+_faster_whisper_model = None
+
+
+def _prepare_cuda_runtime() -> None:
+    """Expose pip-installed CUDA DLLs to CTranslate2 on Windows."""
+    if os.name != "nt":
+        return
+    site_packages = Path(sys.prefix) / "Lib" / "site-packages"
+    cuda_bins = [
+        site_packages / "nvidia" / "cublas" / "bin",
+        site_packages / "nvidia" / "cudnn" / "bin",
+        site_packages / "nvidia" / "cuda_nvrtc" / "bin",
+    ]
+    for cuda_bin in cuda_bins:
+        if cuda_bin.exists():
+            os.add_dll_directory(str(cuda_bin))
+            os.environ["PATH"] = str(cuda_bin) + os.pathsep + os.environ.get("PATH", "")
 
 
 class VideoExtractor:
@@ -168,15 +188,57 @@ class VideoExtractor:
         return sum(rms >= threshold for rms in rms_values) / len(rms_values) >= self.MIN_SPEECH_RATIO
 
     def _transcribe(self, audio_path: str) -> tuple[str, str | None]:
-        model = _get_whisper_model(self.model_size)
-        result = model.transcribe(
-            audio_path,
-            task="transcribe",
-            fp16=False,
-            condition_on_previous_text=False,
-            temperature=0,
-        )
-        return result.get("text", "").strip(), result.get("language")
+        try:
+            _prepare_cuda_runtime()
+            from faster_whisper import WhisperModel
+
+            global _faster_whisper_model
+            if _faster_whisper_model is None:
+                import ctranslate2
+                use_cuda = bool(ctranslate2.get_supported_compute_types("cuda"))
+                _faster_whisper_model = WhisperModel(
+                    self.model_size,
+                    device="cuda" if use_cuda else "cpu",
+                    compute_type="int8_float16" if use_cuda else "int8",
+                )
+            segments, info = _faster_whisper_model.transcribe(
+                audio_path,
+                beam_size=1,
+                language=None,
+                vad_filter=True,
+                condition_on_previous_text=False,
+            )
+            detected_language = getattr(info, "language", None)
+            if detected_language != "en":
+                return "", detected_language
+            return " ".join(segment.text.strip() for segment in segments).strip(), detected_language
+        except ImportError:
+            pass
+        except Exception as exc:
+            print(f"[WARNING] Video faster-whisper unavailable, using CPU faster-whisper: {exc}")
+
+        try:
+            from faster_whisper import WhisperModel
+            cpu_model = WhisperModel(self.model_size, device="cpu", compute_type="int8")
+            segments, info = cpu_model.transcribe(
+                audio_path,
+                beam_size=1,
+                language=None,
+                vad_filter=True,
+                condition_on_previous_text=False,
+            )
+            return " ".join(segment.text.strip() for segment in segments).strip(), getattr(info, "language", None)
+        except Exception as exc:
+            print(f"[WARNING] Video CPU faster-whisper unavailable, using legacy Whisper: {exc}")
+            model = _get_whisper_model(self.model_size)
+            result = model.transcribe(
+                audio_path,
+                task="transcribe",
+                fp16=False,
+                condition_on_previous_text=False,
+                temperature=0,
+            )
+            return result.get("text", "").strip(), result.get("language")
 
     @classmethod
     def _frame_count(cls, duration: float) -> int:

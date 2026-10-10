@@ -14,6 +14,7 @@ import {
   HiOutlineLockClosed,
   HiOutlineLink,
   HiOutlineVolumeUp,
+  HiOutlineVideoCamera,
 } from 'react-icons/hi';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -77,6 +78,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     (stats.text?.count ?? 0) +
     (stats.url?.count ?? 0) +
     (stats.audio?.count ?? 0)
+    + (stats.video?.count ?? 0)
     : 0;
   const totalSize = stats
     ? (stats.document?.total_size_bytes ?? 0) +
@@ -84,6 +86,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     (stats.text?.total_size_bytes ?? 0) +
     (stats.url?.total_size_bytes ?? 0) +
     (stats.audio?.total_size_bytes ?? 0)
+    + (stats.video?.total_size_bytes ?? 0)
     : 0;
 
   const vaultCfg = VAULT_STATUS_CONFIG[vaultStatus] || VAULT_STATUS_CONFIG.unknown;
@@ -147,6 +150,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       count: stats?.audio?.count ?? 0,
       color: 'hsl(262 83% 60%)',
       bg: 'hsl(262 83% 55% / 0.12)',
+    },
+    {
+      label: 'Videos',
+      type: 'video',
+      path: '/dashboard?type=video',
+      icon: HiOutlineVideoCamera,
+      count: stats?.video?.count ?? 0,
+      color: 'hsl(187 92% 55%)',
+      bg: 'hsl(187 92% 55% / 0.12)',
     },
   ];
 

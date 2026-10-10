@@ -7,6 +7,7 @@ import {
   HiOutlineLink,
   HiOutlineExternalLink,
   HiOutlineVolumeUp,
+  HiOutlineVideoCamera,
   HiDotsVertical,
   HiOutlineShare,
   HiOutlineTrash,
@@ -51,6 +52,11 @@ const typeStyles: Record<
     icon: HiOutlineVolumeUp,
     bg: 'hsl(262 83% 58% / 0.12)',
     color: 'hsl(262 83% 60%)',
+  },
+  video: {
+    icon: HiOutlineVideoCamera,
+    bg: 'hsl(187 92% 55% / 0.12)',
+    color: 'hsl(187 92% 55%)',
   },
 };
 

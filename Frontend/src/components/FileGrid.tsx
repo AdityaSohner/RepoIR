@@ -60,6 +60,7 @@ export default function FileGrid() {
     { label: 'URLs', value: 'url' },
     { label: 'Snippets', value: 'text' },
     { label: 'Audios', value: 'audio' },
+    { label: 'Videos', value: 'video' },
   ];
 
   const getExtOptions = () => {
@@ -67,6 +68,7 @@ export default function FileGrid() {
     if (typeFilter === 'image') return ['jpg', 'png'];
     if (typeFilter === 'url') return ['link', 'web'];
     if (typeFilter === 'audio') return ['mp3', 'wav', 'ogg', 'm4a', 'flac', 'webm'];
+    if (typeFilter === 'video') return ['mp4', 'mov', 'mkv', 'avi', 'm4v', 'webm'];
     return [];
   };
 

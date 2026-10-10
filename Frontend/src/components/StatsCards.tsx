@@ -6,6 +6,7 @@ import {
   HiOutlinePencil,
   HiOutlineCollection,
   HiOutlineLink,
+  HiOutlineVideoCamera,
 } from 'react-icons/hi';
 import { useApp } from '@/contexts/AppContext';
 import { formatFileSize } from '@/lib/api';
@@ -28,13 +29,15 @@ export default function StatsCards() {
         ? (stats.document?.count ?? 0) +
         (stats.image?.count ?? 0) +
         (stats.text?.count ?? 0) +
-        (stats.url?.count ?? 0)
+        (stats.url?.count ?? 0) +
+        (stats.video?.count ?? 0)
         : null,
       size: stats
         ? (stats.document?.total_size_bytes ?? 0) +
         (stats.image?.total_size_bytes ?? 0) +
         (stats.text?.total_size_bytes ?? 0) +
-        (stats.url?.total_size_bytes ?? 0)
+        (stats.url?.total_size_bytes ?? 0) +
+        (stats.video?.total_size_bytes ?? 0)
         : null,
     },
     {
@@ -88,10 +91,18 @@ export default function StatsCards() {
         ? (stats.url?.total_size_bytes ?? 0)
         : null,
     },
+    {
+      key: 'videos',
+      label: 'Videos',
+      icon: HiOutlineVideoCamera,
+      gradient: 'linear-gradient(135deg, hsl(187 92% 55%), hsl(199 89% 48%))',
+      count: stats ? (stats.video?.count ?? 0) : null,
+      size: stats ? (stats.video?.total_size_bytes ?? 0) : null,
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
       {cards.map((card, index) => {
         const Icon = card.icon;
         return (

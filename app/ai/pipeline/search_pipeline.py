@@ -120,7 +120,7 @@ class SearchPipeline:
         candidate_count = 30
         q_lower = query.lower()
 
-        # ── Stage 1: Retrieval ─────────────────────────────────────────────
+        
         bm25_chunk_ids = self.db.keyword_search(query, k=candidate_count)
 
         query_vector = self.embedder.embed(query)
@@ -149,7 +149,7 @@ class SearchPipeline:
         if not candidates:
             return []
 
-        # ── Stage 2: Filename Boosting ───────────────────────────────────
+        
         boosted = []
         others = []
         for c in candidates:
@@ -161,7 +161,7 @@ class SearchPipeline:
 
         candidates = boosted + others
 
-        # ── Stage 3: CrossEncoder Reranking ──────────────────────────────
+        
         # Run in a thread so we don't block the async event loop
         reranked = await asyncio.to_thread(
             self._rerank_with_cross_encoder, query, candidates

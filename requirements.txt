@@ -35,6 +35,11 @@ sentence-transformers
 # nltk
 torch
 openai-whisper
+# Optional accelerated Whisper path used by video ingestion when available.
+faster-whisper
+nvidia-cublas-cu12
+nvidia-cudnn-cu12
+nvidia-cuda-nvrtc-cu12
 trafilatura
 playwright
 

@@ -274,7 +274,7 @@ export interface RepoFile {
   object_id: string;
   user_id: string;
   source: string;
-  type: 'document' | 'image' | 'text' | 'url' | 'audio';
+  type: 'document' | 'image' | 'text' | 'url' | 'audio' | 'video';
   file_type: string;
   file_path: string;
   chunk_count: number;
@@ -359,6 +359,7 @@ export interface StatsResponse {
   text: StatItem;
   url: StatItem;
   audio?: StatItem;
+  video?: StatItem;
 }
 
 export interface ActivityItem {
