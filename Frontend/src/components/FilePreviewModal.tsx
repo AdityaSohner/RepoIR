@@ -70,8 +70,20 @@ export default function FilePreviewModal({
     ? `https://drive.google.com/file/d/${file.file_path}/preview`
     : null;
 
+  const getFileUrl = (f: RepoFile | null) => {
+    if (!f) return '';
+    const raw = f.source || f.web_url || f.file_path || '';
+    if (!raw) return '';
+    return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  };
+
   const openInCloud = () => {
     if (!file) return;
+    if (isUrl) {
+      const target = getFileUrl(file);
+      if (target) window.open(target, '_blank');
+      return;
+    }
     if (provider === 'dropbox') {
       const fname = (file.file_path || file.source || '').split('/').pop()?.split('\\').pop();
       if (fname) {
@@ -226,6 +238,7 @@ export default function FilePreviewModal({
 
     // ─ URL Collection ───────────────────────────────────────
     if (isUrl) {
+      const urlToOpen = getFileUrl(file);
       return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] bg-muted/20 rounded-2xl border border-border p-8 text-center">
           <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
@@ -233,10 +246,10 @@ export default function FilePreviewModal({
           </div>
           <h3 className="text-xl font-bold text-foreground mb-2 truncate max-w-lg">{file.source}</h3>
           <p className="text-muted-foreground max-w-sm mx-auto mb-8 break-all">
-            {file.file_path || 'No URL specified'}
+            {urlToOpen || 'No URL specified'}
           </p>
           <a
-            href={file.file_path}
+            href={urlToOpen || undefined}
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary px-8 py-3 flex items-center gap-2"
@@ -323,7 +336,16 @@ export default function FilePreviewModal({
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              {hasCloudPath && (
+              {isUrl ? (
+                <button
+                  onClick={openInCloud}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border hover:bg-muted transition-colors text-sm text-foreground font-medium"
+                  title="Open Link"
+                >
+                  <HiOutlineExternalLink className="w-4 h-4" />
+                  <span className="hidden sm:inline">Open Link</span>
+                </button>
+              ) : hasCloudPath ? (
                 <button
                   onClick={openInCloud}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border hover:bg-muted transition-colors text-sm text-muted-foreground"
@@ -332,7 +354,7 @@ export default function FilePreviewModal({
                   <HiOutlineExternalLink className="w-4 h-4" />
                   <span className="hidden sm:inline">{providerMeta.label}</span>
                 </button>
-              )}
+              ) : null}
               <button
                 onClick={onClose}
                 className="p-2 hover:bg-muted rounded-xl transition-colors"

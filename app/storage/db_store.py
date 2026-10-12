@@ -119,14 +119,34 @@ class DBStore:
         except Exception as e:
             print(f"Dropbox migration notice: {e}")
 
+        # Fix/normalize URL entries for existing files across all providers (OneDrive, GDrive, Dropbox, etc.)
+        try:
+            self.conn.execute("""
+                UPDATE objects
+                SET web_url = source,
+                    file_path = COALESCE(NULLIF(file_path, ''), source)
+                WHERE (type = 'url' OR file_type = 'url')
+                  AND (web_url IS NULL OR web_url = '' OR file_path IS NULL OR file_path = '')
+            """)
+            self.conn.commit()
+        except Exception as e:
+            print(f"URL migration notice: {e}")
+
     # ── Object (file) operations ───────────────────────────────────────────
 
     def store_object(self, object_id: str, user_id: str, source: str,
                      type_: str, file_type: str, file_path: str | None,
-                     chunk_count: int, file_size: int = 0, thumbnail_url: str = None, icon_url: str = None):
+                     chunk_count: int, file_size: int = 0, thumbnail_url: str = None, icon_url: str = None,
+                     provider: str = None, web_url: str = None):
+        if type_ == "url" or file_type == "url":
+            if not web_url:
+                web_url = source
+            if not file_path:
+                file_path = source
+
         self.conn.execute(
-            "INSERT OR REPLACE INTO objects (object_id, user_id, source, type, file_type, file_path, chunk_count, file_size, thumbnail_url, icon_url, is_deleted) VALUES (?,?,?,?,?,?,?,?,?,?,0)",
-            (object_id, user_id, source, type_, file_type, file_path, chunk_count, file_size, thumbnail_url, icon_url)
+            "INSERT OR REPLACE INTO objects (object_id, user_id, source, type, file_type, file_path, chunk_count, file_size, thumbnail_url, icon_url, provider, web_url, is_deleted) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,0)",
+            (object_id, user_id, source, type_, file_type, file_path, chunk_count, file_size, thumbnail_url, icon_url, provider, web_url)
         )
         self.conn.commit()
 

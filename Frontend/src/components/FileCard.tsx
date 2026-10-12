@@ -92,7 +92,9 @@ export default function FileCard({ file, onPreview, onDelete, onShare, index, vi
   const openInCloud = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     if (file.type === 'url') {
-      window.open(file.file_path, '_blank');
+      const raw = file.source || file.web_url || file.file_path || '';
+      const urlToOpen = raw ? (/^https?:\/\//i.test(raw) ? raw : `https://${raw}`) : '';
+      if (urlToOpen) window.open(urlToOpen, '_blank');
       return;
     }
     const provider = file.provider || 'google_drive';

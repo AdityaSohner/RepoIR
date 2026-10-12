@@ -118,7 +118,12 @@ def cloud_background_worker(user_id: str, job_id: str, stream: io.BytesIO, sourc
             return
         
         db.update_job_status(job_id, "uploading")
-        adapter = StorageManager.get_adapter(user_id=user_id, user_password=password)
+        # Google Drive tokens are encrypted with the server-derived vault key
+        # (see gdrive_callback → _derive_vault_key), not the raw form password.
+        # Dropbox/OneDrive tokens live in the DB and don't need this key at all,
+        # but passing it is harmless for them.
+        vault_key = _derive_vault_key(user_id)
+        adapter = StorageManager.get_adapter(user_id=user_id, user_password=vault_key)
         if not adapter:
             raise Exception("No connected cloud storage provider found for user.")
 
@@ -878,7 +883,7 @@ def list_files(category_id: Optional[str] = None, user_id: str = Depends(get_cur
     """Only return files that have a Drive file_path (Drive-backed objects)."""
     db = DBStore(user_id=user_id)
     all_objects = db.list_all_objects(category_id=category_id)
-    drive_objects = [obj for obj in all_objects if obj.get("file_path")]
+    drive_objects = [obj for obj in all_objects if obj.get("file_path") or obj.get("type") in ("url", "text")]
     return {"files": drive_objects}
 
 @app.get("/v1/users/search", response_model=List[UserSearchResult])
@@ -1079,7 +1084,10 @@ async def preview_file(object_id: str, password: Optional[str] = None, user_id: 
     provider = obj.get("provider")  # e.g. "google_drive", "dropbox", "onedrive"
 
     try:
-        adapter = StorageManager.get_adapter(user_id=user_id, provider=provider, user_password=password)
+        # Use the server-derived vault key (same key used to encrypt the GDrive token
+        # during OAuth). Harmless for Dropbox/OneDrive which use DB-stored tokens.
+        vault_key = _derive_vault_key(user_id)
+        adapter = StorageManager.get_adapter(user_id=user_id, provider=provider, user_password=vault_key)
         file_stream = adapter.download(file_id)
         if not file_stream:
             raise HTTPException(status_code=404, detail="File content could not be retrieved from cloud storage")

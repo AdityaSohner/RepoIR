@@ -135,14 +135,16 @@ class IngestionPipeline:
             file_size = os.path.getsize(source)
         elif source_type == "url":
             file_size = len(semantic_text.encode('utf-8'))
+            file_path = original_name or str(source)
 
         # Local file storage is disabled — original files go to Google Drive only.
-        file_path = None
+        if source_type != "url":
+            file_path = None
 
         self.db.store_object(
             object_id, user_id, original_name or str(source), 
             source_type, file_type, file_path, len(chunks), 
-            file_size, thumbnail_url=None
+            file_size, thumbnail_url=None, web_url=(original_name or str(source)) if source_type == "url" else None
         )
         self.db.store_chunks(object_id, chunks)
         with _ingestion_lock:
